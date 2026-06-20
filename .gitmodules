@@ -1,0 +1,3 @@
+[submodule "external/project-v-engine"]
+	path = external/project-v-engine
+	url = https://github.com/TheBossBaby/project-v-engine.git
