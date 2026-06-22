@@ -17,7 +17,7 @@ add_library(projectv_vulkan STATIC
 
 target_include_directories(projectv_vulkan
     PUBLIC
-        ${CMAKE_CURRENT_SOURCE_DIR}/include
+        ${CMAKE_CURRENT_SOURCE_DIR}/include/projectV
 )
 
 target_link_libraries(projectv_vulkan
