@@ -20,9 +20,9 @@ namespace projectv
 
             void resize(std::uint32_t width, std::uint32_t height) override;
 
-            void beginFrame() override;
+            void beginFrame(const core::RenderView& renderView) override;
 
-            void renderScene(engine::World& world);
+            void draw(const std::vector<core::Renderable>& items) override;
 
             void endFrame() override;
 

@@ -3,6 +3,7 @@
 #include <projectV/core/meshHandle.hpp>
 
 #include <projectV/engine/graph/scene/ecs/world.hpp>
+#include <projectV/engine/logging/log.hpp>
 
 #include <vulkan/vulkanRenderer.hpp>
 
@@ -18,30 +19,32 @@ namespace projectv
 
     bool vulkan::vulkanRenderer::init(const core::RendererConfig &config)
     {
+        engine::LogInfo("init");
         return true;
     }
 
     void vulkan::vulkanRenderer::resize(std::uint32_t width, std::uint32_t height)
     {
+        engine::LogInfo("resize");
     }
 
-    void vulkan::vulkanRenderer::beginFrame()
+    void vulkan::vulkanRenderer::beginFrame(const core::RenderView& renderView)
     {
+        engine::LogInfo("beginFrame");
     }
 
-    void vulkan::vulkanRenderer::renderScene(engine::World &world)
+    void vulkan::vulkanRenderer::draw(const std::vector<core::Renderable>& items)
     {
-        auto renderView = world.view<
-        core::Transform,
-        core::ShaderHandle,
-        core::MeshHandle>();
+        engine::LogInfo("draw");
     }
 
     void vulkan::vulkanRenderer::endFrame()
     {
+        engine::LogInfo("endFrame");
     }
 
     void vulkan::vulkanRenderer::waitIdle()
     {
+        engine::LogInfo("waitIdle");
     }
 }
