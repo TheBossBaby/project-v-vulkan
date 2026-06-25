@@ -6,8 +6,10 @@ set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
 
-# Engine as submodule
-add_subdirectory(external/project-v-engine)
+# Only add engine submodule if the target doesn't already exist
+if (NOT TARGET projectv_engine)
+    add_subdirectory(external/project-v-engine)
+endif()
 
 # Vulkan renderer library (no main)
 add_library(projectv_vulkan STATIC
