@@ -13,6 +13,9 @@ endif()
 
 find_package(Vulkan REQUIRED)
 
+message(STATUS "Vulkan include dir: ${Vulkan_INCLUDE_DIRS}")
+message(STATUS "Vulkan libraries: ${Vulkan_LIBRARIES}")
+
 # Vulkan renderer library (no main)
 add_library(projectv_vulkan STATIC
     src/vulkanRenderer.cpp
