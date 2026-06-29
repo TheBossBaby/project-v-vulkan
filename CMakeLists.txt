@@ -29,6 +29,8 @@ add_library(projectv_vulkan STATIC
     include/projectV/vulkan/device/vulkanPhysicalDevice.hpp
     
     include/projectV/vulkan/util/vulkanCheck.hpp
+    include/projectV/vulkan/util/windowExtension.hpp
+    include/projectV/vulkan/util/glfwWindowExtension.hpp
 
     include/projectV/vulkan/window/vulkanSurface.hpp
     include/projectV/vulkan/window/vulkanSwapchain.hpp
@@ -36,6 +38,8 @@ add_library(projectv_vulkan STATIC
     src/device/vulkanDevice.cpp
     src/device/vulkanInstance.cpp
     src/device/vulkanPhysicalDevice.cpp
+
+    src/util/glfwWindowExtension.cpp
 
     src/window/vulkanSurface.cpp
     src/window/vulkanSwapchain.cpp
