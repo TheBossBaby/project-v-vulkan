@@ -5,6 +5,9 @@
 #include <projectV/engine/graph/scene/ecs/world.hpp>
 #include <projectV/engine/logging/log.hpp>
 
+#include <vulkan/vulkanFactory.hpp>
+#include <vulkan/device/vulkanInstance.hpp>
+#include <vulkan/util/windowExtension.hpp>
 #include <vulkan/vulkanRenderer.hpp>
 
 namespace projectv
@@ -19,7 +22,12 @@ namespace projectv
 
     bool vulkan::vulkanRenderer::init(const core::RendererConfig &config)
     {
-        engine::LogInfo("init");
+        engine::LogInfo("vulkan::vulkanRenderer::init");
+
+        instance = VulkanFactory::createInstance();
+        windowExtension = VulkanFactory::createWindowExtension();    
+        instance->create(*windowExtension.get());
+
         return true;
     }
 
@@ -30,21 +38,17 @@ namespace projectv
 
     void vulkan::vulkanRenderer::beginFrame(const core::RenderView& renderView)
     {
-        engine::LogInfo("beginFrame");
     }
 
     void vulkan::vulkanRenderer::draw(const std::vector<core::Renderable>& items)
     {
-        engine::LogInfo("draw");
     }
 
     void vulkan::vulkanRenderer::endFrame()
     {
-        engine::LogInfo("endFrame");
     }
 
     void vulkan::vulkanRenderer::waitIdle()
     {
-        engine::LogInfo("waitIdle");
     }
 }

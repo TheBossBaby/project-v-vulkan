@@ -1,6 +1,7 @@
 #pragma once
 
 #include <vulkan/vulkan.h>
+#include <vulkan/util/windowExtension.hpp>
 
 namespace projectv
 {
@@ -20,7 +21,7 @@ namespace projectv
             /**
             * @brief Create vulkan Instance.
             */
-            void create(const class IWindowExtension& windowExtension);
+            void create(const vulkan::util::IWindowExtension& windowExtension);
 
             /**
             * @brief Destroy vulkan Instance.

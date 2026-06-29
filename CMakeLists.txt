@@ -21,6 +21,7 @@ add_library(projectv_vulkan STATIC
     src/vulkanRenderer.cpp
     
     include/projectV/vulkan/vulkanRenderer.hpp
+    include/projectV/vulkan/vulkanFactory.hpp
 
     include/projectV/vulkan/config/vulkanConfig.hpp
 

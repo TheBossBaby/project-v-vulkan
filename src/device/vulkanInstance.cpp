@@ -1,8 +1,8 @@
-#include <windowExtension.hpp>
-#include <vulkanCheck.hpp>
-#include <projectV/vulkan/config/vulkanConfig.hpp>
+#include <vulkan/util/vulkanCheck.hpp>
+#include <vulkan/config/vulkanConfig.hpp>
 #include <vulkanInstance.hpp>
 
+#include <string>
 #include <memory>
 
 namespace projectv
@@ -18,9 +18,9 @@ namespace projectv
             destroy();
         }
 
-        void VulkanInstance::create(const IWindowExtension& windowExtension)
+        void VulkanInstance::create(const vulkan::util::IWindowExtension& windowExtension)
         {
-            auto extension = windowExtension->Extensions();
+            auto extensions = windowExtension.Extensions();
 
             VkApplicationInfo appInfo{};
             appInfo.sType = VK_STRUCTURE_TYPE_APPLICATION_INFO;
@@ -36,9 +36,8 @@ namespace projectv
             createInfo.enabledExtensionCount = static_cast<uint32_t>(extensions.size());
             createInfo.ppEnabledExtensionNames = extensions.data();
             createInfo.enabledLayerCount = 0;
-
             vkCheck(vkCreateInstance(&createInfo, nullptr, &instance), 
-            "Failed to create Vulkan Instance")
+            "Failed to create Vulkan Instance");
         }
 
         void VulkanInstance::destroy()

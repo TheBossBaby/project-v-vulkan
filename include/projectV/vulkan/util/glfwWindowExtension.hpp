@@ -13,8 +13,6 @@ namespace projectv
         {
         public:
             std::span<const char* const> Extensions() const override;
-        private:
-            std::vector<const char*> m_extensions;
         };
     }
 }

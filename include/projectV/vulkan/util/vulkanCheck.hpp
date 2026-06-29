@@ -1,6 +1,6 @@
 #pragma once
 
-#include <vulkan.h>
+#include <vulkan/vulkan.h>
 
 #include <string>
 #include <string_view>

@@ -9,6 +9,9 @@ namespace projectv
 
     namespace vulkan
     {
+        namespace device { class VulkanInstance;}
+        namespace util { class IWindowExtension;}
+
         class vulkanRenderer : public core::IRenderer
         {
         public:
@@ -27,6 +30,10 @@ namespace projectv
             void endFrame() override;
 
             void waitIdle() override;
+        private:
+            std::unique_ptr<device::VulkanInstance> instance;
+
+            std::unique_ptr<util::IWindowExtension> windowExtension;
         };
     }
 }
