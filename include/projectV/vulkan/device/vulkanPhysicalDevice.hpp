@@ -4,6 +4,8 @@
 
 namespace projectv
 {
+    namespace vulkan::types { struct QueueFamilies ;}
+    
     namespace vulkan::device
     {
         class VulkanPhysicalDevice
@@ -42,6 +44,8 @@ namespace projectv
             * @return 
             */
             bool isDeviceSuitable(VkPhysicalDevice device);
+
+            vulkan::types::QueueFamilies findQueueFamilies(VkPhysicalDevice device);
         private:
             /**
             * @brief 

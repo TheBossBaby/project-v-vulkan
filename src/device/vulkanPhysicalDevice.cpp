@@ -1,6 +1,11 @@
+#include <projectV/engine/logging/log.hpp>
+
 #include <vulkan/util/vulkanCheck.hpp>
+#include <vulkan/types/queueFamilies.hpp>
+
 #include <vulkanPhysicalDevice.hpp>
 
+#include <format>
 #include <vector>
 namespace projectv
 {
@@ -46,6 +51,31 @@ namespace projectv
             
         }
 
+        vulkan::types::QueueFamilies VulkanPhysicalDevice::findQueueFamilies(VkPhysicalDevice device)
+        {   
+            vulkan::types::QueueFamilies families;
+            uint32_t queueFamilyCount = 0;
+
+            vkGetPhysicalDeviceQueueFamilyProperties(device, &queueFamilyCount, nullptr);
+            
+            std::vector<VkQueueFamilyProperties> queueFamilies(queueFamilyCount);
+            vkGetPhysicalDeviceQueueFamilyProperties(device, &queueFamilyCount, queueFamilies.data());
+
+            int index = 0;
+            for (const auto& queueFamily : queueFamilies) 
+            {
+                if (queueFamily.queueFlags & VK_QUEUE_GRAPHICS_BIT) 
+                {
+                    families.graphics = index;
+                    break;
+                }
+
+                index++;
+            }
+
+            return families;
+        }
+
         VkPhysicalDevice VulkanPhysicalDevice::handle() const noexcept
         {
             return physicalDevice;
@@ -53,11 +83,20 @@ namespace projectv
         
         bool VulkanPhysicalDevice::isDeviceSuitable(VkPhysicalDevice device)
         {
+            vulkan::types::QueueFamilies queueFamilies = findQueueFamilies(device);
+            if(!queueFamilies.isComplete()) 
+            {
+                engine::LogError("VulkanPhysicalDevice::isDeviceSuitable - No valid queue family found.");
+                return false;
+            }
+    
             VkPhysicalDeviceProperties deviceProperties;
             VkPhysicalDeviceFeatures deviceFeatures;
             
             vkGetPhysicalDeviceProperties(device, &deviceProperties);
             vkGetPhysicalDeviceFeatures(device, &deviceFeatures);
+            
+            engine::LogInfo(std::format("VulkanPhysicalDevice::isDeviceSuitable, Selected GPU: {}", deviceProperties.deviceName));
 
             return deviceProperties.deviceType == VK_PHYSICAL_DEVICE_TYPE_DISCRETE_GPU &&
            deviceFeatures.geometryShader;
