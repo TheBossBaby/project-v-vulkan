@@ -6,9 +6,12 @@
 #include <projectV/engine/logging/log.hpp>
 
 #include <vulkan/vulkanFactory.hpp>
-#include <vulkan/device/vulkanInstance.hpp>
-#include <vulkan/util/windowExtension.hpp>
 #include <vulkan/vulkanRenderer.hpp>
+
+#include <vulkan/device/vulkanInstance.hpp>
+#include <vulkan/device/vulkanPhysicalDevice.hpp>
+
+#include <vulkan/util/windowExtension.hpp>
 
 namespace projectv
 {
@@ -25,8 +28,11 @@ namespace projectv
         engine::LogInfo("vulkan::vulkanRenderer::init");
 
         instance = VulkanFactory::createInstance();
-        windowExtension = VulkanFactory::createWindowExtension();    
+        windowExtension = VulkanFactory::createWindowExtension();  
+        physicalDevice = VulkanFactory::createPhysicalDevice();
+
         instance->create(*windowExtension.get());
+        physicalDevice->select(instance->handle());
 
         return true;
     }

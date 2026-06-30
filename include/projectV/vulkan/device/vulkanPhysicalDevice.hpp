@@ -9,11 +9,45 @@ namespace projectv
         class VulkanPhysicalDevice
         {
         public:
-            VulkanPhysicalDevice(/* args */);
+            /**
+            * @brief Construct a new Vulkan Physical Device object
+            * 
+             */
+            VulkanPhysicalDevice();
 
+            /**
+            * @brief Destroy the Vulkan Physical Device object
+            * 
+             */
             ~VulkanPhysicalDevice();
+
+            /**
+            * @brief 
+            * 
+             */
+            void select(VkInstance instance);
+
+            /**
+            * @brief 
+            * 
+            * @return 
+             */
+            VkPhysicalDevice handle() const noexcept;
         private:
-            VkPhysicalDevice physicalDevice;        
+            /**
+            * @brief 
+            * 
+            * @param device 
+            * @return 
+            * @return 
+            */
+            bool isDeviceSuitable(VkPhysicalDevice device);
+        private:
+            /**
+            * @brief 
+            * 
+            */
+            VkPhysicalDevice physicalDevice = VK_NULL_HANDLE;        
     };        
     }
 }

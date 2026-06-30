@@ -9,7 +9,11 @@ namespace projectv
 
     namespace vulkan
     {
-        namespace device { class VulkanInstance;}
+        namespace device
+        {
+            class VulkanInstance;
+            class VulkanPhysicalDevice;
+        }
         namespace util { class IWindowExtension;}
 
         class vulkanRenderer : public core::IRenderer
@@ -34,6 +38,8 @@ namespace projectv
             std::unique_ptr<device::VulkanInstance> instance;
 
             std::unique_ptr<util::IWindowExtension> windowExtension;
+
+            std::unique_ptr<device::VulkanPhysicalDevice> physicalDevice;
         };
     }
 }
