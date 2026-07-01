@@ -1,7 +1,7 @@
 #include <projectV/engine/logging/log.hpp>
 
 #include <vulkan/util/vulkanCheck.hpp>
-#include <vulkan/types/queueFamilies.hpp>
+
 
 #include <vulkanPhysicalDevice.hpp>
 
@@ -83,8 +83,8 @@ namespace projectv
         
         bool VulkanPhysicalDevice::isDeviceSuitable(VkPhysicalDevice device)
         {
-            vulkan::types::QueueFamilies queueFamilies = findQueueFamilies(device);
-            if(!queueFamilies.isComplete()) 
+            queueFamiliesIndex = findQueueFamilies(device);
+            if(!queueFamiliesIndex.isComplete()) 
             {
                 engine::LogError("VulkanPhysicalDevice::isDeviceSuitable - No valid queue family found.");
                 return false;

@@ -13,6 +13,7 @@ namespace projectv
         {
             class VulkanInstance;
             class VulkanPhysicalDevice;
+            class VulkanDevice;
         }
         namespace util { class IWindowExtension;}
 
@@ -40,6 +41,8 @@ namespace projectv
             std::unique_ptr<util::IWindowExtension> windowExtension;
 
             std::unique_ptr<device::VulkanPhysicalDevice> physicalDevice;
+
+            std::unique_ptr<device::VulkanDevice> logicalDevice;
         };
     }
 }

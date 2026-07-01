@@ -2,9 +2,9 @@
 
 #include <vulkan/vulkan.h>
 
+#include <vulkan/types/queueFamilies.hpp>
 namespace projectv
 {
-    namespace vulkan::types { struct QueueFamilies ;}
     
     namespace vulkan::device
     {
@@ -35,6 +35,8 @@ namespace projectv
             * @return 
              */
             VkPhysicalDevice handle() const noexcept;
+            
+            const vulkan::types::QueueFamilies& queueFamilies() const { return queueFamiliesIndex; }
         private:
             /**
             * @brief 
@@ -45,13 +47,25 @@ namespace projectv
             */
             bool isDeviceSuitable(VkPhysicalDevice device);
 
+            /**
+            * @brief 
+            * 
+            * @param device 
+            * @return 
+            */
             vulkan::types::QueueFamilies findQueueFamilies(VkPhysicalDevice device);
         private:
             /**
             * @brief 
             * 
             */
-            VkPhysicalDevice physicalDevice = VK_NULL_HANDLE;        
+            VkPhysicalDevice physicalDevice = VK_NULL_HANDLE;
+            
+            /**
+            * @brief 
+            * 
+            */
+            vulkan::types::QueueFamilies queueFamiliesIndex;
     };        
     }
 }

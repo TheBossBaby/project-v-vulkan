@@ -1,5 +1,6 @@
 #pragma once
 
+#include <vulkan/device/vulkanDevice.hpp>
 #include <vulkan/device/vulkanInstance.hpp>
 #include <vulkan/device/vulkanPhysicalDevice.hpp>
 
@@ -31,6 +32,11 @@ namespace projectv
                 static std::unique_ptr<device::VulkanPhysicalDevice> createPhysicalDevice()
                 {
                     return std::make_unique<device::VulkanPhysicalDevice>();
+                }
+
+                static std::unique_ptr<device::VulkanDevice> createLogicalDevice()
+                {
+                    return std::make_unique<device::VulkanDevice>();
                 }
         };
     }

@@ -8,6 +8,7 @@
 #include <vulkan/vulkanFactory.hpp>
 #include <vulkan/vulkanRenderer.hpp>
 
+#include <vulkan/device/vulkanDevice.hpp>
 #include <vulkan/device/vulkanInstance.hpp>
 #include <vulkan/device/vulkanPhysicalDevice.hpp>
 
@@ -30,9 +31,11 @@ namespace projectv
         instance = VulkanFactory::createInstance();
         windowExtension = VulkanFactory::createWindowExtension();  
         physicalDevice = VulkanFactory::createPhysicalDevice();
+        logicalDevice = VulkanFactory::createLogicalDevice();
 
         instance->create(*windowExtension.get());
         physicalDevice->select(instance->handle());
+        logicalDevice->create(physicalDevice->handle(), physicalDevice->queueFamilies());
 
         return true;
     }
