@@ -6,6 +6,8 @@
 #include <vulkanDevice.hpp>
 
 #include <cassert>
+#include <format>
+
 namespace projectv
 {
     namespace vulkan::device
@@ -46,6 +48,8 @@ namespace projectv
 
             vkCheck(vkCreateDevice(physicalDevice, &createInfo, nullptr, &logicalDevice), 
                 "VulkanDevice::create, failed to create logical device!");
+
+            acquireGraphicsQueue(queueFamilies);    
         }
 
         void VulkanDevice::destroy()
@@ -61,6 +65,17 @@ namespace projectv
         VkDevice VulkanDevice::handle() const noexcept
         {
             return logicalDevice;
+        }
+
+        void VulkanDevice::acquireGraphicsQueue(const vulkan::types::QueueFamilies& queueFamilies)
+        {
+            assert(queueFamilies.isComplete());
+
+            constexpr uint32_t QUEUE_INDEX = 0;
+
+            vkGetDeviceQueue(logicalDevice, queueFamilies.graphics.value(), QUEUE_INDEX, &graphicsQueue);
+            engine::LogInfo(std::format( "VulkanDevice::acquireGraphicsQueue graphicsQueue Handle : {}", 
+                static_cast<const void*>(graphicsQueue)));
         }
     }
 }
