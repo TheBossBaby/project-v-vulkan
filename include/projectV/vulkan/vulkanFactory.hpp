@@ -41,9 +41,9 @@ namespace projectv
                     return std::make_unique<device::VulkanDevice>();
                 }
 
-                static std::unique_ptr<commands::VulkanCommandPool> createCommandPool()
+                static std::unique_ptr<command::VulkanCommandPool> createCommandPool()
                 {
-                    return std::make_unique<commands::VulkanCommandPool>();
+                    return std::make_unique<command::VulkanCommandPool>();
                 }
         };
     }
