@@ -29,6 +29,8 @@ add_library(projectv_vulkan STATIC
     include/projectV/vulkan/device/vulkanInstance.hpp
     include/projectV/vulkan/device/vulkanPhysicalDevice.hpp
     
+    include/projectV/vulkan/command/vulkanCommandPool.hpp
+
     include/projectV/vulkan/types/queueFamilies.hpp
 
     include/projectV/vulkan/util/vulkanCheck.hpp
@@ -38,6 +40,8 @@ add_library(projectv_vulkan STATIC
     include/projectV/vulkan/window/vulkanSurface.hpp
     include/projectV/vulkan/window/vulkanSwapchain.hpp
 
+    src/command/vulkanCommandPool.cpp
+    
     src/device/vulkanDevice.cpp
     src/device/vulkanInstance.cpp
     src/device/vulkanPhysicalDevice.cpp
@@ -53,6 +57,7 @@ target_include_directories(projectv_vulkan
         ${CMAKE_CURRENT_SOURCE_DIR}/include/projectV
         ${CMAKE_CURRENT_SOURCE_DIR}/include/projectV/vulkan
         ${CMAKE_CURRENT_SOURCE_DIR}/include/projectV/vulkan/config
+        ${CMAKE_CURRENT_SOURCE_DIR}/include/projectV/vulkan/command
         ${CMAKE_CURRENT_SOURCE_DIR}/include/projectV/vulkan/device
         ${CMAKE_CURRENT_SOURCE_DIR}/include/projectV/vulkan/util
         ${CMAKE_CURRENT_SOURCE_DIR}/include/projectV/vulkan/window/

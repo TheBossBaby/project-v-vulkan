@@ -1,5 +1,7 @@
 #pragma once
 
+#include <vulkan/command/vulkanCommandPool.hpp>
+
 #include <vulkan/device/vulkanDevice.hpp>
 #include <vulkan/device/vulkanInstance.hpp>
 #include <vulkan/device/vulkanPhysicalDevice.hpp>
@@ -37,6 +39,11 @@ namespace projectv
                 static std::unique_ptr<device::VulkanDevice> createLogicalDevice()
                 {
                     return std::make_unique<device::VulkanDevice>();
+                }
+
+                static std::unique_ptr<commands::VulkanCommandPool> createCommandPool()
+                {
+                    return std::make_unique<commands::VulkanCommandPool>();
                 }
         };
     }

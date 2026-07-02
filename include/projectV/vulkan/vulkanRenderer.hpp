@@ -15,6 +15,12 @@ namespace projectv
             class VulkanPhysicalDevice;
             class VulkanDevice;
         }
+
+        namespace command
+        {
+            class VulkanCommandPool;
+        }
+
         namespace util { class IWindowExtension;}
 
         class vulkanRenderer : public core::IRenderer
@@ -43,6 +49,8 @@ namespace projectv
             std::unique_ptr<device::VulkanPhysicalDevice> physicalDevice;
 
             std::unique_ptr<device::VulkanDevice> logicalDevice;
+
+            std::unique_ptr<command::VulkanCommandPool> graphicsCommandPool;
         };
     }
 }
