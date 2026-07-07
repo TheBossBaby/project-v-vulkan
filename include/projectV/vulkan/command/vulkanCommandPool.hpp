@@ -37,7 +37,7 @@ namespace projectv
             * @param level 
             * @return 
             */
-            class VulkanCommandBuffer allocate(VkCommandBufferLevel inLevel);
+            [[nodiscard]] class VulkanCommandBuffer allocate(VkCommandBufferLevel inLevel);
         private:
             /**
             * @brief 
