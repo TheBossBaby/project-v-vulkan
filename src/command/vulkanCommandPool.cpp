@@ -1,6 +1,8 @@
 #include <projectV/engine/logging/log.hpp>
+
 #include <vulkan/util/vulkanCheck.hpp>
 
+#include <vulkan/command/vulkanCommandBuffer.hpp>
 #include <vulkanCommandPool.hpp>
 
 namespace projectv
@@ -24,6 +26,21 @@ namespace projectv
 
             vkCheck(vkCreateCommandPool(device, &poolInfo, nullptr, &commandPool), 
             "VulkanCommandPool::create, Failed to create command pool!");
+        }
+
+        VulkanCommandBuffer VulkanCommandPool::allocate(VkCommandBufferLevel inLevel)
+        {
+            VkCommandBuffer commandBuffer;
+
+            VkCommandBufferAllocateInfo allocInfo{};
+            allocInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
+            allocInfo.commandPool = commandPool;
+            allocInfo.level = inLevel;
+            allocInfo.commandBufferCount = 1;
+
+            vkCheck(vkAllocateCommandBuffers(device, &allocInfo, &commandBuffer), "VulkanCommandPool::allocate, Failed to allocate command buffer!");
+
+            return VulkanCommandBuffer (commandBuffer);
         }
 
         void VulkanCommandPool::destroy()

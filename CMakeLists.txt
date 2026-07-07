@@ -29,6 +29,7 @@ add_library(projectv_vulkan STATIC
     include/projectV/vulkan/device/vulkanInstance.hpp
     include/projectV/vulkan/device/vulkanPhysicalDevice.hpp
     
+    include/projectV/vulkan/command/vulkanCommandBuffer.hpp
     include/projectV/vulkan/command/vulkanCommandPool.hpp
 
     include/projectV/vulkan/types/queueFamilies.hpp
@@ -40,6 +41,7 @@ add_library(projectv_vulkan STATIC
     include/projectV/vulkan/window/vulkanSurface.hpp
     include/projectV/vulkan/window/vulkanSwapchain.hpp
 
+    src/command/vulkanCommandBuffer.cpp
     src/command/vulkanCommandPool.cpp
     
     src/device/vulkanDevice.cpp

@@ -5,9 +5,12 @@
 #include <projectV/engine/graph/scene/ecs/world.hpp>
 #include <projectV/engine/logging/log.hpp>
 
+#include <vulkan/vulkan.h>
+
 #include <vulkan/vulkanFactory.hpp>
 #include <vulkan/vulkanRenderer.hpp>
 
+#include <vulkan/command/vulkanCommandBuffer.hpp>
 #include <vulkan/command/vulkanCommandPool.hpp>
 
 #include <vulkan/device/vulkanDevice.hpp>
@@ -41,6 +44,9 @@ namespace projectv
         logicalDevice->create(physicalDevice->handle(), physicalDevice->queueFamilies());
 
         graphicsCommandPool->create(logicalDevice->handle(), physicalDevice->queueFamilies().graphics.value());
+
+        command::VulkanCommandBuffer testCommandBuffer = graphicsCommandPool->allocate(VK_COMMAND_BUFFER_LEVEL_PRIMARY);
+        testCommandBuffer.begin();
         return true;
     }
 

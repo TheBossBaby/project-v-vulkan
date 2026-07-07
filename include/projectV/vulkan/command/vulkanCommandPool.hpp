@@ -2,6 +2,7 @@
 
 #include <vulkan/vulkan.h>
 
+
 namespace projectv
 {
     namespace vulkan::command
@@ -30,6 +31,13 @@ namespace projectv
             */
             VkCommandPool handle() const noexcept;
 
+            /**
+            * @brief 
+            * 
+            * @param level 
+            * @return 
+            */
+            class VulkanCommandBuffer allocate(VkCommandBufferLevel inLevel);
         private:
             /**
             * @brief 

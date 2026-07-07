@@ -19,6 +19,7 @@ namespace projectv
         namespace command
         {
             class VulkanCommandPool;
+            class VulkanCommandBuffer;
         }
 
         namespace util { class IWindowExtension;}
