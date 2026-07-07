@@ -2,6 +2,8 @@
 
 #include <projectV/engine/logging/log.hpp>
 
+#include <vulkan/util/vulkanCheck.hpp>
+
 #include "vulkanCommandBuffer.hpp"
 namespace projectv
 {
@@ -14,12 +16,18 @@ namespace projectv
 
         void VulkanCommandBuffer::begin()
         {
-            engine::LogInfo(std::format("VulkanCommandBuffer::begin, Command Buffer {} start", static_cast<void*>(commandBuffer)));
+            VkCommandBufferBeginInfo beginInfo{};
+            beginInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
+            beginInfo.flags = 0; // No special recording behavior.
+            beginInfo.pInheritanceInfo = nullptr; // Optional
+
+            vkCheck(vkBeginCommandBuffer(commandBuffer, &beginInfo), 
+                "VulkanCommandBuffer::begin, Failed to begin recording command buffer!");
         }
 
         void VulkanCommandBuffer::end()
         {
-            engine::LogInfo("VulkanCommandBuffer::end, Command Buffer end");
+            vkCheck(vkEndCommandBuffer(commandBuffer), "VulkanCommandBuffer::end, Failed to end command buffer recording!");
         }
 
         VkCommandBuffer VulkanCommandBuffer::handle() const noexcept

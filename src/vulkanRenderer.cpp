@@ -47,6 +47,8 @@ namespace projectv
 
         command::VulkanCommandBuffer testCommandBuffer = graphicsCommandPool->allocate(VK_COMMAND_BUFFER_LEVEL_PRIMARY);
         testCommandBuffer.begin();
+        testCommandBuffer.end();
+        
         return true;
     }
 
