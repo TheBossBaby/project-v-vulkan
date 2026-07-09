@@ -6,6 +6,8 @@
 #include <vulkan/device/vulkanInstance.hpp>
 #include <vulkan/device/vulkanPhysicalDevice.hpp>
 
+#include <vulkan/synchronization/VulkanFence.hpp>
+
 #include <vulkan/util/glfwWindowExtension.hpp>
 
 #include <memory>
@@ -44,6 +46,11 @@ namespace projectv
                 static std::unique_ptr<command::VulkanCommandPool> createCommandPool()
                 {
                     return std::make_unique<command::VulkanCommandPool>();
+                }
+
+                static std::unique_ptr<sync::VulkanFence> createFence()
+                {
+                    return std::make_unique<sync::VulkanFence>();
                 }
         };
     }

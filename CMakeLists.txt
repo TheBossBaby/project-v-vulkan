@@ -24,14 +24,15 @@ add_library(projectv_vulkan STATIC
     include/projectV/vulkan/vulkanFactory.hpp
 
     include/projectV/vulkan/config/vulkanConfig.hpp
+    include/projectV/vulkan/command/vulkanCommandBuffer.hpp
+    include/projectV/vulkan/command/vulkanCommandPool.hpp
 
     include/projectV/vulkan/device/vulkanDevice.hpp
     include/projectV/vulkan/device/vulkanInstance.hpp
     include/projectV/vulkan/device/vulkanPhysicalDevice.hpp
     include/projectV/vulkan/device/vulkanQueue.hpp
 
-    include/projectV/vulkan/command/vulkanCommandBuffer.hpp
-    include/projectV/vulkan/command/vulkanCommandPool.hpp
+    include/projectV/vulkan/synchronization/vulkanFence.hpp
 
     include/projectV/vulkan/types/queueFamilies.hpp
 
@@ -49,6 +50,8 @@ add_library(projectv_vulkan STATIC
     src/device/vulkanInstance.cpp
     src/device/vulkanPhysicalDevice.cpp
     src/device/vulkanQueue.cpp
+
+    src/synchronization/vulkanFence.cpp
 
     src/util/glfwWindowExtension.cpp
 

@@ -39,19 +39,30 @@ namespace projectv
         physicalDevice = VulkanFactory::createPhysicalDevice();
         logicalDevice = VulkanFactory::createLogicalDevice();
         graphicsCommandPool = VulkanFactory::createCommandPool();
+        graphicsFence = VulkanFactory::createFence();
 
         instance->create(*windowExtension.get());
         physicalDevice->select(instance->handle());
         logicalDevice->create(physicalDevice->handle(), physicalDevice->queueFamilies());
 
         graphicsCommandPool->create(logicalDevice->handle(), physicalDevice->queueFamilies().graphics.value());
+        graphicsFence->create(logicalDevice->handle());
 
         command::VulkanCommandBuffer testCommandBuffer = graphicsCommandPool->allocate(VK_COMMAND_BUFFER_LEVEL_PRIMARY);
         testCommandBuffer.begin();
         testCommandBuffer.end();
-        logicalDevice->graphicsQueue().submit(testCommandBuffer);
-        logicalDevice->graphicsQueue().waitIdle();
-        
+
+        engine::LogInfo("vulkan::vulkanRenderer::Submiting");
+
+        logicalDevice->graphicsQueue().submit(testCommandBuffer, *graphicsFence.get());
+        engine::LogInfo("vulkan::vulkanRenderer::Submitted");
+        engine::LogInfo("vulkan::vulkanRenderer::Wait start");
+
+        graphicsFence->wait();
+        engine::LogInfo("vulkan::vulkanRenderer::Reseting");
+
+        graphicsFence->reset();
+        engine::LogInfo("vulkan::vulkanRenderer::Reset done");        
         return true;
     }
 

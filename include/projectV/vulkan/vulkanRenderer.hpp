@@ -16,6 +16,11 @@ namespace projectv
             class VulkanDevice;
         }
 
+        namespace sync
+        {
+            class VulkanFence;
+        }
+
         namespace command
         {
             class VulkanCommandPool;
@@ -52,6 +57,8 @@ namespace projectv
             std::unique_ptr<device::VulkanDevice> logicalDevice;
 
             std::unique_ptr<command::VulkanCommandPool> graphicsCommandPool;
+
+            std::unique_ptr<sync::VulkanFence> graphicsFence;
         };
     }
 }

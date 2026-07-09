@@ -1,4 +1,5 @@
 #include <vulkan/command/vulkanCommandBuffer.hpp>
+#include <vulkan/synchronization/vulkanFence.hpp>
 #include <vulkan/util/vulkanCheck.hpp>
 
 #include <vulkanQueue.hpp>
@@ -12,7 +13,7 @@ namespace projectv
             queue = inQueue;
         }
 
-        void VulkanQueue::submit(const command::VulkanCommandBuffer &commandBuffer) const
+        void VulkanQueue::submit(const command::VulkanCommandBuffer &commandBuffer, const sync::VulkanFence& fence) const
         {
             VkCommandBuffer cmdBufferHandle = commandBuffer.handle();
             VkSubmitInfo submitInfo{};
@@ -21,7 +22,7 @@ namespace projectv
             submitInfo.commandBufferCount = 1;
             submitInfo.pCommandBuffers = &cmdBufferHandle;
 
-            vkCheck(vkQueueSubmit( queue, 1, &submitInfo, VK_NULL_HANDLE), "VulkanQueue::submit, Failed to sumbmit command buffer");
+            vkCheck(vkQueueSubmit( queue, 1, &submitInfo, fence.handle()), "VulkanQueue::submit, Failed to sumbmit command buffer");
         }
 
         void VulkanQueue::waitIdle() const
