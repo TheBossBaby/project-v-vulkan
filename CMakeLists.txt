@@ -28,7 +28,8 @@ add_library(projectv_vulkan STATIC
     include/projectV/vulkan/device/vulkanDevice.hpp
     include/projectV/vulkan/device/vulkanInstance.hpp
     include/projectV/vulkan/device/vulkanPhysicalDevice.hpp
-    
+    include/projectV/vulkan/device/vulkanQueue.hpp
+
     include/projectV/vulkan/command/vulkanCommandBuffer.hpp
     include/projectV/vulkan/command/vulkanCommandPool.hpp
 
@@ -47,6 +48,7 @@ add_library(projectv_vulkan STATIC
     src/device/vulkanDevice.cpp
     src/device/vulkanInstance.cpp
     src/device/vulkanPhysicalDevice.cpp
+    src/device/vulkanQueue.cpp
 
     src/util/glfwWindowExtension.cpp
 

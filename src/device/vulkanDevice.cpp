@@ -67,15 +67,23 @@ namespace projectv
             return logicalDevice;
         }
 
+        VulkanQueue &VulkanDevice::graphicsQueue()
+        {
+            return m_graphicsQueue;
+        }
+
         void VulkanDevice::acquireGraphicsQueue(const vulkan::types::QueueFamilies& queueFamilies)
         {
             assert(queueFamilies.isComplete());
 
             constexpr uint32_t QUEUE_INDEX = 0;
+            VkQueue queueHandle  = VK_NULL_HANDLE;
 
-            vkGetDeviceQueue(logicalDevice, queueFamilies.graphics.value(), QUEUE_INDEX, &graphicsQueue);
-            engine::LogInfo(std::format( "VulkanDevice::acquireGraphicsQueue graphicsQueue Handle : {}", 
-                static_cast<const void*>(graphicsQueue)));
+            vkGetDeviceQueue(logicalDevice, queueFamilies.graphics.value(), QUEUE_INDEX, &queueHandle );
+
+            m_graphicsQueue.create(queueHandle );
+            engine::LogInfo(std::format( "VulkanDevice::acquireGraphicsQueue m_graphicsQueue Handle : {}", 
+                static_cast<const void*>(m_graphicsQueue.handle())));
         }
     }
 }

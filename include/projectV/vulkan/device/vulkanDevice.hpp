@@ -2,6 +2,7 @@
 
 #include <vulkan/vulkan.h>
 
+#include <vulkan/device/vulkanQueue.hpp>
 namespace projectv
 {
     namespace vulkan::types { struct QueueFamilies ;}
@@ -33,13 +34,13 @@ namespace projectv
             */
             VkDevice handle() const noexcept;
 
-            VkQueue graphicsQueueHandle() const noexcept { return graphicsQueue; }
+            VulkanQueue& graphicsQueue();
         private:
             void acquireGraphicsQueue(const vulkan::types::QueueFamilies& queueFamilies);
         private:
            VkDevice logicalDevice = VK_NULL_HANDLE;
 
-           VkQueue graphicsQueue = VK_NULL_HANDLE;
+           VulkanQueue m_graphicsQueue;
         };        
     }
 }

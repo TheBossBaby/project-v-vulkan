@@ -16,6 +16,7 @@
 #include <vulkan/device/vulkanDevice.hpp>
 #include <vulkan/device/vulkanInstance.hpp>
 #include <vulkan/device/vulkanPhysicalDevice.hpp>
+#include <vulkan/device/vulkanQueue.hpp>
 
 #include <vulkan/util/windowExtension.hpp>
 
@@ -48,6 +49,8 @@ namespace projectv
         command::VulkanCommandBuffer testCommandBuffer = graphicsCommandPool->allocate(VK_COMMAND_BUFFER_LEVEL_PRIMARY);
         testCommandBuffer.begin();
         testCommandBuffer.end();
+        logicalDevice->graphicsQueue().submit(testCommandBuffer);
+        logicalDevice->graphicsQueue().waitIdle();
         
         return true;
     }
