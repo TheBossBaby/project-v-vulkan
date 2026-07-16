@@ -1,5 +1,8 @@
 #pragma once
 
+#include <projectV/core/window.hpp>
+#include <vulkan/window/windowSurface.hpp>
+
 #include <vulkan/vulkan.h>
 
 namespace projectv
@@ -11,9 +14,17 @@ namespace projectv
         public:
             VulkanSurface();
 
+            void create(VkInstance instance, IWindowSurface& windowSurfaceProvider, core::IWindow& window);
+
+            void destroy();
+
+            VkSurfaceKHR handle() const noexcept;
+
             ~VulkanSurface();
         private:
-            VkSurfaceKHR surface;    
+            VkInstance m_instance = VK_NULL_HANDLE;
+
+            VkSurfaceKHR m_surface = VK_NULL_HANDLE;  
         };
     }
 }

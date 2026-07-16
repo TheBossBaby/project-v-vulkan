@@ -20,6 +20,8 @@
 
 #include <vulkan/util/windowExtension.hpp>
 
+#include <vulkan/window/vulkanSurface.hpp>
+
 namespace projectv
 {
     vulkan::vulkanRenderer::vulkanRenderer()
@@ -28,20 +30,25 @@ namespace projectv
 
     vulkan::vulkanRenderer::~vulkanRenderer()
     {
+        window = nullptr;
     }
 
-    bool vulkan::vulkanRenderer::init(const core::RendererConfig &config)
+    bool vulkan::vulkanRenderer::init(const core::RendererConfig &config, core::IWindow& inWindow)
     {
         engine::LogInfo("vulkan::vulkanRenderer::init");
 
+        window = &inWindow;
         instance = VulkanFactory::createInstance();
-        windowExtension = VulkanFactory::createWindowExtension();  
+        windowExtension = VulkanFactory::createWindowExtension();
+        windowSurfaceProvider = VulkanFactory::createWindowSurfaceProvider();
+        windowSurface = VulkanFactory::createSurface();  
         physicalDevice = VulkanFactory::createPhysicalDevice();
         logicalDevice = VulkanFactory::createLogicalDevice();
         graphicsCommandPool = VulkanFactory::createCommandPool();
         graphicsFence = VulkanFactory::createFence();
 
         instance->create(*windowExtension.get());
+        windowSurface->create(instance->handle(), *windowSurfaceProvider.get(), *window);
         physicalDevice->select(instance->handle());
         logicalDevice->create(physicalDevice->handle(), physicalDevice->queueFamilies());
 

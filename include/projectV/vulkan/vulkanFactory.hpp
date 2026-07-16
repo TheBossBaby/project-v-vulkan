@@ -1,7 +1,6 @@
 #pragma once
 
 #include <vulkan/command/vulkanCommandPool.hpp>
-
 #include <vulkan/device/vulkanDevice.hpp>
 #include <vulkan/device/vulkanInstance.hpp>
 #include <vulkan/device/vulkanPhysicalDevice.hpp>
@@ -9,6 +8,9 @@
 #include <vulkan/synchronization/VulkanFence.hpp>
 
 #include <vulkan/util/glfwWindowExtension.hpp>
+
+#include <vulkan/window/glfwWindowSurface.hpp>
+#include <vulkan/window/vulkanSurface.hpp>
 
 #include <memory>
 
@@ -31,6 +33,16 @@ namespace projectv
                 static std::unique_ptr<util::IWindowExtension> createWindowExtension()
                 {
                     return std::make_unique<util::GlfwWindowExtension>();
+                }
+
+                static std::unique_ptr<window::IWindowSurface> createWindowSurfaceProvider()
+                {
+                    return std::make_unique<window::GlfwWindowSurface>();
+                }
+
+                static std::unique_ptr<window::VulkanSurface> createSurface()
+                {
+                    return std::make_unique<window::VulkanSurface>();
                 }
 
                 static std::unique_ptr<device::VulkanPhysicalDevice> createPhysicalDevice()

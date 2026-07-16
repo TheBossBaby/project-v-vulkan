@@ -9,6 +9,12 @@ namespace projectv
 
     namespace vulkan
     {
+        namespace command
+        {
+            class VulkanCommandPool;
+            class VulkanCommandBuffer;
+        }
+
         namespace device
         {
             class VulkanInstance;
@@ -21,13 +27,13 @@ namespace projectv
             class VulkanFence;
         }
 
-        namespace command
-        {
-            class VulkanCommandPool;
-            class VulkanCommandBuffer;
-        }
+        namespace util { class IWindowExtension; }
 
-        namespace util { class IWindowExtension;}
+        namespace window 
+        {
+            class IWindowSurface; 
+            class VulkanSurface;
+         }
 
         class vulkanRenderer : public core::IRenderer
         {
@@ -36,7 +42,7 @@ namespace projectv
 
             ~vulkanRenderer();
 
-            bool init(const core::RendererConfig& config) override;
+            bool init(const core::RendererConfig& config, core::IWindow& inWindow) override;
 
             void resize(std::uint32_t width, std::uint32_t height) override;
 
@@ -51,6 +57,10 @@ namespace projectv
             std::unique_ptr<device::VulkanInstance> instance;
 
             std::unique_ptr<util::IWindowExtension> windowExtension;
+            
+            std::unique_ptr<window::IWindowSurface> windowSurfaceProvider;
+
+            std::unique_ptr<window::VulkanSurface> windowSurface;
 
             std::unique_ptr<device::VulkanPhysicalDevice> physicalDevice;
 
@@ -59,6 +69,8 @@ namespace projectv
             std::unique_ptr<command::VulkanCommandPool> graphicsCommandPool;
 
             std::unique_ptr<sync::VulkanFence> graphicsFence;
+
+            core::IWindow* window = nullptr;
         };
     }
 }

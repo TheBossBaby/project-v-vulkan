@@ -42,6 +42,8 @@ add_library(projectv_vulkan STATIC
 
     include/projectV/vulkan/window/vulkanSurface.hpp
     include/projectV/vulkan/window/vulkanSwapchain.hpp
+    include/projectV/vulkan/window/windowSurface.hpp
+    include/projectV/vulkan/window/glfwWindowSurface.hpp
 
     src/command/vulkanCommandBuffer.cpp
     src/command/vulkanCommandPool.cpp
@@ -57,6 +59,8 @@ add_library(projectv_vulkan STATIC
 
     src/window/vulkanSurface.cpp
     src/window/vulkanSwapchain.cpp
+    src/window/windowSurface.cpp
+    src/window/glfwWindowSurface.cpp
 )
 
 target_include_directories(projectv_vulkan
