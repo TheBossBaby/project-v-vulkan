@@ -11,18 +11,73 @@ if (NOT TARGET projectv_engine)
     add_subdirectory(external/project-v-engine)
 endif()
 
+find_package(Vulkan REQUIRED)
+
+message(STATUS "Vulkan include dir: ${Vulkan_INCLUDE_DIRS}")
+message(STATUS "Vulkan libraries: ${Vulkan_LIBRARIES}")
+
 # Vulkan renderer library (no main)
 add_library(projectv_vulkan STATIC
     src/vulkanRenderer.cpp
+    
     include/projectV/vulkan/vulkanRenderer.hpp
+    include/projectV/vulkan/vulkanFactory.hpp
+
+    include/projectV/vulkan/config/vulkanConfig.hpp
+    include/projectV/vulkan/command/vulkanCommandBuffer.hpp
+    include/projectV/vulkan/command/vulkanCommandPool.hpp
+
+    include/projectV/vulkan/device/vulkanDevice.hpp
+    include/projectV/vulkan/device/vulkanInstance.hpp
+    include/projectV/vulkan/device/vulkanPhysicalDevice.hpp
+    include/projectV/vulkan/device/vulkanQueue.hpp
+
+    include/projectV/vulkan/synchronization/vulkanFence.hpp
+
+    include/projectV/vulkan/types/queueFamilies.hpp
+
+    include/projectV/vulkan/util/vulkanCheck.hpp
+    include/projectV/vulkan/util/windowExtension.hpp
+    include/projectV/vulkan/util/glfwWindowExtension.hpp
+
+    include/projectV/vulkan/window/vulkanSurface.hpp
+    include/projectV/vulkan/window/vulkanSwapchain.hpp
+    include/projectV/vulkan/window/windowSurface.hpp
+    include/projectV/vulkan/window/glfwWindowSurface.hpp
+
+    src/command/vulkanCommandBuffer.cpp
+    src/command/vulkanCommandPool.cpp
+    
+    src/device/vulkanDevice.cpp
+    src/device/vulkanInstance.cpp
+    src/device/vulkanPhysicalDevice.cpp
+    src/device/vulkanQueue.cpp
+
+    src/synchronization/vulkanFence.cpp
+
+    src/util/glfwWindowExtension.cpp
+
+    src/window/vulkanSurface.cpp
+    src/window/vulkanSwapchain.cpp
+    src/window/windowSurface.cpp
+    src/window/glfwWindowSurface.cpp
 )
 
 target_include_directories(projectv_vulkan
     PUBLIC
         ${CMAKE_CURRENT_SOURCE_DIR}/include/projectV
+        ${CMAKE_CURRENT_SOURCE_DIR}/include/projectV/vulkan
+        ${CMAKE_CURRENT_SOURCE_DIR}/include/projectV/vulkan/config
+        ${CMAKE_CURRENT_SOURCE_DIR}/include/projectV/vulkan/command
+        ${CMAKE_CURRENT_SOURCE_DIR}/include/projectV/vulkan/device
+        ${CMAKE_CURRENT_SOURCE_DIR}/include/projectV/vulkan/util
+        ${CMAKE_CURRENT_SOURCE_DIR}/include/projectV/vulkan/window/
 )
 
 target_link_libraries(projectv_vulkan
     PUBLIC
         projectv_engine    # depend on engine API
+
+    PRIVATE
+        Vulkan::Vulkan
 )
