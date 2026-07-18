@@ -7,6 +7,7 @@
 
 #include <vulkan/vulkan.h>
 
+#include <vulkan/config/vulkanConfig.hpp>
 #include <vulkan/vulkanFactory.hpp>
 #include <vulkan/vulkanRenderer.hpp>
 
@@ -49,7 +50,7 @@ namespace projectv
 
         instance->create(*windowExtension.get());
         windowSurface->create(instance->handle(), *windowSurfaceProvider.get(), *window);
-        physicalDevice->select(instance->handle(), windowSurface->handle());
+        physicalDevice->select(instance->handle(), windowSurface->handle(), config::DeviceExtensions);
         logicalDevice->create(physicalDevice->handle(), physicalDevice->queueFamilies());
 
         graphicsCommandPool->create(logicalDevice->handle(), physicalDevice->queueFamilies().graphics.value());

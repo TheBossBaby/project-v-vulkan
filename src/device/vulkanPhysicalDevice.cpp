@@ -6,7 +6,8 @@
 #include <vulkanPhysicalDevice.hpp>
 
 #include <format>
-#include <vector>
+#include <unordered_set>
+
 namespace projectv
 {
     namespace vulkan::device
@@ -19,7 +20,7 @@ namespace projectv
         {
         }
 
-        void VulkanPhysicalDevice::select(VkInstance instance, VkSurfaceKHR surface)
+        void VulkanPhysicalDevice::select(VkInstance instance, VkSurfaceKHR surface, const std::vector<const char*>& requiredDeviceExtensionList)
         {
             uint32_t deviceCount = 0;
             vkCheck(
@@ -40,7 +41,7 @@ namespace projectv
 
             for (const auto& device : devices)
             {
-                if (isDeviceSuitable(device, surface))
+                if (isDeviceSuitable(device, surface, requiredDeviceExtensionList))
                 {
                     physicalDevice = device;
                     break;
@@ -49,6 +50,40 @@ namespace projectv
 
             if (physicalDevice == VK_NULL_HANDLE) throw std::runtime_error("VulkanPhysicalDevice::select, failed to find a suitable GPU!");
             
+        }
+
+        VkPhysicalDevice VulkanPhysicalDevice::handle() const noexcept
+        {
+            return physicalDevice;
+        }
+
+        bool VulkanPhysicalDevice::isDeviceSuitable(VkPhysicalDevice device, VkSurfaceKHR surface, const std::vector<const char*>& requiredDeviceExtensionList)
+        {
+            queueFamiliesIndex = findQueueFamilies(device, surface);
+            if(!queueFamiliesIndex.isComplete()) 
+            {
+                engine::LogError("VulkanPhysicalDevice::isDeviceSuitable - No valid queue family found.");
+                return false;
+            }
+
+            if(!supportsDeviceExtensions(device, requiredDeviceExtensionList))
+            {
+                engine::LogError("VulkanPhysicalDevice::isDeviceSuitable - Required Device Extensions are not supported.");
+                return false;
+            }
+
+            engine::LogInfo(std::format("VulkanPhysicalDevice::isDeviceSuitable, graphics queue : {}, presentation queue : {}", queueFamiliesIndex.graphics.value(), queueFamiliesIndex.presentation.value()));
+    
+            VkPhysicalDeviceProperties deviceProperties;
+            VkPhysicalDeviceFeatures deviceFeatures;
+            
+            vkGetPhysicalDeviceProperties(device, &deviceProperties);
+            vkGetPhysicalDeviceFeatures(device, &deviceFeatures);
+            
+            engine::LogInfo(std::format("VulkanPhysicalDevice::isDeviceSuitable, Selected GPU: {}", deviceProperties.deviceName));
+
+            return deviceProperties.deviceType == VK_PHYSICAL_DEVICE_TYPE_DISCRETE_GPU &&
+           deviceFeatures.geometryShader;
         }
 
         vulkan::types::QueueFamilies VulkanPhysicalDevice::findQueueFamilies(VkPhysicalDevice device, VkSurfaceKHR surface)
@@ -93,33 +128,28 @@ namespace projectv
             }
 
             return families;
-        }
+        }   
 
-        VkPhysicalDevice VulkanPhysicalDevice::handle() const noexcept
+        bool VulkanPhysicalDevice::supportsDeviceExtensions(VkPhysicalDevice device, const std::vector<const char*>& deviceExtensions)
         {
-            return physicalDevice;
-        }
-        
-        bool VulkanPhysicalDevice::isDeviceSuitable(VkPhysicalDevice device, VkSurfaceKHR surface)
-        {
-            queueFamiliesIndex = findQueueFamilies(device, surface);
-            if(!queueFamiliesIndex.isComplete()) 
+            uint32_t extensionCount;
+            vkCheck(
+                vkEnumerateDeviceExtensionProperties(device, nullptr, &extensionCount, nullptr),
+                "Failed to enumerate device extensions");
+
+            std::vector<VkExtensionProperties> availableExtensions(extensionCount);
+            vkCheck(
+                vkEnumerateDeviceExtensionProperties(device, nullptr, &extensionCount, availableExtensions.data()),
+                "Failed to enumerate device extensions");
+
+            std::unordered_set<std::string> requiredExtensions(deviceExtensions.begin(), deviceExtensions.end());
+
+            for (const auto& extension : availableExtensions) 
             {
-                engine::LogError("VulkanPhysicalDevice::isDeviceSuitable - No valid queue family found.");
-                return false;
+                requiredExtensions.erase(extension.extensionName);
             }
-            engine::LogInfo(std::format("VulkanPhysicalDevice::isDeviceSuitable, graphics queue : {}, presentation queue : {}", queueFamiliesIndex.graphics.value(), queueFamiliesIndex.presentation.value()));
-    
-            VkPhysicalDeviceProperties deviceProperties;
-            VkPhysicalDeviceFeatures deviceFeatures;
-            
-            vkGetPhysicalDeviceProperties(device, &deviceProperties);
-            vkGetPhysicalDeviceFeatures(device, &deviceFeatures);
-            
-            engine::LogInfo(std::format("VulkanPhysicalDevice::isDeviceSuitable, Selected GPU: {}", deviceProperties.deviceName));
 
-            return deviceProperties.deviceType == VK_PHYSICAL_DEVICE_TYPE_DISCRETE_GPU &&
-           deviceFeatures.geometryShader;
+            return requiredExtensions.empty();
         }
     }
 }
