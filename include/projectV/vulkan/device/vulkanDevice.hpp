@@ -3,6 +3,8 @@
 #include <vulkan/vulkan.h>
 
 #include <vulkan/device/vulkanQueue.hpp>
+
+#include <vector>
 namespace projectv
 {
     namespace vulkan::types { struct QueueFamilies ;}
@@ -18,8 +20,12 @@ namespace projectv
 
             /**
             * @brief Create vulkan logical device.
-            */
-            void create(VkPhysicalDevice physicalDevice, const vulkan::types::QueueFamilies& queueFamilies);
+            * 
+            * @param physicalDevice Handle of physcial Device
+            * @param queueFamilies 
+            * @param requiredDeviceExtensionList 
+             */
+            void create(VkPhysicalDevice physicalDevice, const vulkan::types::QueueFamilies& queueFamilies, const std::vector<const char*>& requiredDeviceExtensionList);
             
             /**
             * @brief 

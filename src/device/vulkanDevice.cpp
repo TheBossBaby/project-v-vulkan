@@ -23,8 +23,9 @@ namespace projectv
             destroy();
         }
 
-        void VulkanDevice::create(VkPhysicalDevice physicalDevice, const vulkan::types::QueueFamilies& queueFamilies)
+        void VulkanDevice::create(VkPhysicalDevice physicalDevice, const vulkan::types::QueueFamilies& queueFamilies, const std::vector<const char*>& requiredDeviceExtensionList)
         {
+            assert(physicalDevice != VK_NULL_HANDLE);
             assert(queueFamilies.isComplete());
 
             constexpr uint32_t QUEUE_COUNT = 1;
@@ -51,7 +52,8 @@ namespace projectv
             createInfo.queueCreateInfoCount = static_cast<uint32_t>(queueCreateInfoList.size());
 
             createInfo.pEnabledFeatures = &deviceFeatures;
-            createInfo.enabledExtensionCount = 0;
+            createInfo.enabledExtensionCount = static_cast<uint32_t>(requiredDeviceExtensionList.size());
+            createInfo.ppEnabledExtensionNames = requiredDeviceExtensionList.data();
             createInfo.enabledLayerCount = 0;
 
             vkCheck(vkCreateDevice(physicalDevice, &createInfo, nullptr, &logicalDevice), 
