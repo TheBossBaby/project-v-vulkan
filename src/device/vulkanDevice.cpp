@@ -7,6 +7,8 @@
 
 #include <cassert>
 #include <format>
+#include <unordered_set>
+#include <vector>
 
 namespace projectv
 {
@@ -26,21 +28,27 @@ namespace projectv
             assert(queueFamilies.isComplete());
 
             constexpr uint32_t QUEUE_COUNT = 1;
-            constexpr uint32_t QUEUE_INFO_COUNT = 1;
             constexpr float QUEUE_PRIORITY = 1.0f;
 
-            VkDeviceQueueCreateInfo queueCreateInfo{};
-            queueCreateInfo.sType = VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO;
-            queueCreateInfo.queueFamilyIndex = queueFamilies.graphics.value();
-            queueCreateInfo.queueCount = QUEUE_COUNT;
-            queueCreateInfo.pQueuePriorities = &QUEUE_PRIORITY;
+            std::vector<VkDeviceQueueCreateInfo> queueCreateInfoList;
+            std::unordered_set<uint32_t> uniqueQueueFamilies = {queueFamilies.graphics.value(), queueFamilies.presentation.value()};
+
+            for (uint32_t queueFamily : uniqueQueueFamilies) 
+            {
+                VkDeviceQueueCreateInfo queueCreateInfo{};
+                queueCreateInfo.sType = VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO;
+                queueCreateInfo.queueFamilyIndex = queueFamily;
+                queueCreateInfo.queueCount = QUEUE_COUNT;
+                queueCreateInfo.pQueuePriorities = &QUEUE_PRIORITY;
+                queueCreateInfoList.push_back(queueCreateInfo);
+            }
 
             VkPhysicalDeviceFeatures deviceFeatures{};
 
             VkDeviceCreateInfo createInfo{};
             createInfo.sType = VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO;
-            createInfo.pQueueCreateInfos = &queueCreateInfo;
-            createInfo.queueCreateInfoCount = QUEUE_INFO_COUNT;
+            createInfo.pQueueCreateInfos = queueCreateInfoList.data();
+            createInfo.queueCreateInfoCount = static_cast<uint32_t>(queueCreateInfoList.size());
 
             createInfo.pEnabledFeatures = &deviceFeatures;
             createInfo.enabledExtensionCount = 0;
@@ -49,7 +57,8 @@ namespace projectv
             vkCheck(vkCreateDevice(physicalDevice, &createInfo, nullptr, &logicalDevice), 
                 "VulkanDevice::create, failed to create logical device!");
 
-            acquireGraphicsQueue(queueFamilies);    
+            acquireQueue(queueFamilies.graphics.value(), m_graphicsQueue);    
+            acquireQueue(queueFamilies.presentation.value(), m_presentQueue);    
         }
 
         void VulkanDevice::destroy()
@@ -72,18 +81,22 @@ namespace projectv
             return m_graphicsQueue;
         }
 
-        void VulkanDevice::acquireGraphicsQueue(const vulkan::types::QueueFamilies& queueFamilies)
+        VulkanQueue &VulkanDevice::presentQueue()
         {
-            assert(queueFamilies.isComplete());
+            return m_presentQueue;
+        }
 
+        void VulkanDevice::acquireQueue(const uint32_t queueFamilyIndex, VulkanQueue& vulkanQueue)
+        {
             constexpr uint32_t QUEUE_INDEX = 0;
             VkQueue queueHandle  = VK_NULL_HANDLE;
 
-            vkGetDeviceQueue(logicalDevice, queueFamilies.graphics.value(), QUEUE_INDEX, &queueHandle );
+            vkGetDeviceQueue(logicalDevice, queueFamilyIndex, QUEUE_INDEX, &queueHandle );
+            vulkanQueue.create(queueHandle);
 
-            m_graphicsQueue.create(queueHandle );
-            engine::LogInfo(std::format( "VulkanDevice::acquireGraphicsQueue m_graphicsQueue Handle : {}", 
-                static_cast<const void*>(m_graphicsQueue.handle())));
+            engine::LogInfo(std::format( "VulkanDevice::acquireQueue Queue Family {} Handle : {}",
+                queueFamilyIndex,
+                static_cast<const void*>(vulkanQueue.handle())));
         }
     }
 }

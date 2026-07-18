@@ -35,12 +35,16 @@ namespace projectv
             VkDevice handle() const noexcept;
 
             VulkanQueue& graphicsQueue();
+
+            VulkanQueue& presentQueue();
         private:
-            void acquireGraphicsQueue(const vulkan::types::QueueFamilies& queueFamilies);
+            void acquireQueue(const uint32_t queueFamilyIndex, VulkanQueue& vulkanQueue);
         private:
            VkDevice logicalDevice = VK_NULL_HANDLE;
 
            VulkanQueue m_graphicsQueue;
+
+           VulkanQueue m_presentQueue;
         };        
     }
 }
