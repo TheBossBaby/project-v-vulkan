@@ -27,7 +27,7 @@ namespace projectv
             * @brief 
             * 
              */
-            void select(VkInstance instance);
+            void select(VkInstance instance, VkSurfaceKHR surface);
 
             /**
             * @brief 
@@ -45,7 +45,7 @@ namespace projectv
             * @return 
             * @return 
             */
-            bool isDeviceSuitable(VkPhysicalDevice device);
+            bool isDeviceSuitable(VkPhysicalDevice device, VkSurfaceKHR surface);
 
             /**
             * @brief 
@@ -53,7 +53,7 @@ namespace projectv
             * @param device 
             * @return 
             */
-            vulkan::types::QueueFamilies findQueueFamilies(VkPhysicalDevice device);
+            vulkan::types::QueueFamilies findQueueFamilies(VkPhysicalDevice device, VkSurfaceKHR surface);
         private:
             /**
             * @brief 

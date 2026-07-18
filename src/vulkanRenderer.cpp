@@ -49,7 +49,7 @@ namespace projectv
 
         instance->create(*windowExtension.get());
         windowSurface->create(instance->handle(), *windowSurfaceProvider.get(), *window);
-        physicalDevice->select(instance->handle());
+        physicalDevice->select(instance->handle(), windowSurface->handle());
         logicalDevice->create(physicalDevice->handle(), physicalDevice->queueFamilies());
 
         graphicsCommandPool->create(logicalDevice->handle(), physicalDevice->queueFamilies().graphics.value());
