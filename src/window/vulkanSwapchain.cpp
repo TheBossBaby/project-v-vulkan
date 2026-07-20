@@ -1,7 +1,5 @@
 #include <vulkanSwapchain.hpp>
 
-#include <GLFW/glfw3.h> //This is to be removed from this class using abstraction
-
 #include <projectV/engine/logging/log.hpp>
 
 #include <vulkan/config/vulkanConfig.hpp>
@@ -35,7 +33,7 @@ namespace projectv
             m_surface = surface;
         }
 
-        void VulkanSwapchain::create(const device::VulkanPhysicalDevice&  physicalDevice, VkDevice  logicalDevice, VkSurfaceKHR surface)
+        void VulkanSwapchain::create(const device::VulkanPhysicalDevice&  physicalDevice, VkDevice  logicalDevice, VkSurfaceKHR surface, uint32_t width, uint32_t height)
         {
             engine::LogInfo("VulkanSwapchain::create, Creating swapchain.");
             m_physicalDevice = physicalDevice.handle();
@@ -48,7 +46,7 @@ namespace projectv
 
             VkSurfaceFormatKHR surfaceFormat = selectSwapSurfaceFormat(swapChainSupport.formats);
             VkPresentModeKHR presentMode = selectSwapPresentMode(swapChainSupport.presentModes);
-            VkExtent2D extent = selectSwapExtent(swapChainSupport.capabilities);
+            VkExtent2D extent = selectSwapExtent(swapChainSupport.capabilities, width, height);
             uint32_t imageCount = selectImageCount(swapChainSupport.capabilities);
 
             auto indices = physicalDevice.queueFamilies();
@@ -168,7 +166,7 @@ namespace projectv
             return config::FallBackSwapchainPresentMode;
         }
 
-        VkExtent2D VulkanSwapchain::selectSwapExtent(const VkSurfaceCapabilitiesKHR &capabilities)
+        VkExtent2D VulkanSwapchain::selectSwapExtent(const VkSurfaceCapabilitiesKHR &capabilities, uint32_t width, uint32_t height)
         {
             if (capabilities.currentExtent.width != std::numeric_limits<uint32_t>::max()) 
             {
@@ -176,15 +174,7 @@ namespace projectv
             } 
             else 
             {
-                int width, height;
-                // glfwGetFramebufferSize(window, &width, &height);
-
-                VkExtent2D actualExtent = 
-                {
-                    static_cast<uint32_t>(width),
-                    static_cast<uint32_t>(height)
-                };
-
+                VkExtent2D actualExtent = { width, height };
                 actualExtent.width = std::clamp(actualExtent.width, capabilities.minImageExtent.width, capabilities.maxImageExtent.width);
                 actualExtent.height = std::clamp(actualExtent.height, capabilities.minImageExtent.height, capabilities.maxImageExtent.height);
 

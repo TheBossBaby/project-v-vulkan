@@ -60,7 +60,7 @@ namespace projectv
              * @param logicalDevice Logical device.
              * @param surface Window presentation surface.
              */
-            void create(const device::VulkanPhysicalDevice& physicalDevice, VkDevice  logicalDevice, VkSurfaceKHR surface);
+            void create(const device::VulkanPhysicalDevice& physicalDevice, VkDevice  logicalDevice, VkSurfaceKHR surface, uint32_t width, uint32_t height);
         private:
             /**
              * @brief Verifies that swapchain creation is supported.
@@ -102,9 +102,11 @@ namespace projectv
             * @brief Selects the swapchain image extent.
             * 
             * @param capabilities Capabilities of swapchain which the physical device and surface has.
-            * @return 
+            * @param width Width of swapchain
+            * @param height Height of swapchain
+            * @return Extent of swapchain
              */
-            VkExtent2D selectSwapExtent(const VkSurfaceCapabilitiesKHR& capabilities);
+            VkExtent2D selectSwapExtent(const VkSurfaceCapabilitiesKHR& capabilities, uint32_t width, uint32_t height);
 
             /**
             * @brief Selects the number of swapchain images.

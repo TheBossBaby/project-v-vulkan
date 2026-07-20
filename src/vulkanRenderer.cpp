@@ -55,7 +55,7 @@ namespace projectv
         windowSurface->create(instance->handle(), *windowSurfaceProvider.get(), *window);
         physicalDevice->select(instance->handle(), windowSurface->handle(), config::DeviceExtensions);
         logicalDevice->create(physicalDevice->handle(), physicalDevice->queueFamilies(), config::DeviceExtensions);
-        swapchain->create(*physicalDevice.get(), logicalDevice->handle(), windowSurface->handle());
+        swapchain->create(*physicalDevice.get(), logicalDevice->handle(), windowSurface->handle(), window->getWidth(), window->getHeight());
 
         graphicsCommandPool->create(logicalDevice->handle(), physicalDevice->queueFamilies().graphics.value());
         graphicsFence->create(logicalDevice->handle());
