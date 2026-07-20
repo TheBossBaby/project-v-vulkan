@@ -27,12 +27,6 @@ namespace projectv
             return m_swapchain;
         }
 
-        void VulkanSwapchain::init(const device::VulkanPhysicalDevice&  physicalDevice, VkSurfaceKHR surface)
-        {
-            m_physicalDevice = physicalDevice.handle();
-            m_surface = surface;
-        }
-
         void VulkanSwapchain::create(const device::VulkanPhysicalDevice&  physicalDevice, VkDevice  logicalDevice, VkSurfaceKHR surface, uint32_t width, uint32_t height)
         {
             engine::LogInfo("VulkanSwapchain::create, Creating swapchain.");

@@ -43,14 +43,6 @@ namespace projectv
             VkSwapchainKHR handle() const noexcept;
 
             /**
-             * @brief Stores the Vulkan objects required for swapchain creation.
-             *
-             * @param physicalDevice Selected physical device.
-             * @param surface Window presentation surface.
-             */
-            void init(const device::VulkanPhysicalDevice& physicalDevice, VkSurfaceKHR surface);
-
-            /**
              * @brief Creates the Vulkan swapchain.
              *
              * Queries swapchain support, selects the preferred configuration,
