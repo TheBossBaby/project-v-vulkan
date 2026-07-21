@@ -27,6 +27,21 @@ namespace projectv
             return m_swapchain;
         }
 
+        const VkSurfaceFormatKHR& VulkanSwapchain::format() const noexcept
+        {
+            return m_format;
+        }
+
+        const VkExtent2D &VulkanSwapchain::extent() const noexcept
+        {
+            return m_extent;
+        }
+
+        std::span<const VkImage> VulkanSwapchain::images() const noexcept
+        {
+            return m_images;
+        }
+
         void VulkanSwapchain::create(const device::VulkanPhysicalDevice&  physicalDevice, VkDevice  logicalDevice, VkSurfaceKHR surface, uint32_t width, uint32_t height)
         {
             engine::LogInfo("VulkanSwapchain::create, Creating swapchain.");
@@ -38,9 +53,9 @@ namespace projectv
 
             SwapChainSupportDetails swapChainSupport = querySwapChainSupport(m_physicalDevice, m_surface);
 
-            VkSurfaceFormatKHR surfaceFormat = selectSwapSurfaceFormat(swapChainSupport.formats);
+            m_format = selectSwapSurfaceFormat(swapChainSupport.formats);
             VkPresentModeKHR presentMode = selectSwapPresentMode(swapChainSupport.presentModes);
-            VkExtent2D extent = selectSwapExtent(swapChainSupport.capabilities, width, height);
+            m_extent = selectSwapExtent(swapChainSupport.capabilities, width, height);
             uint32_t imageCount = selectImageCount(swapChainSupport.capabilities);
 
             auto indices = physicalDevice.queueFamilies();
@@ -50,9 +65,9 @@ namespace projectv
             createInfo.sType = VK_STRUCTURE_TYPE_SWAPCHAIN_CREATE_INFO_KHR;
             createInfo.surface = m_surface;
             createInfo.minImageCount = imageCount;
-            createInfo.imageFormat = surfaceFormat.format;
-            createInfo.imageColorSpace = surfaceFormat.colorSpace;
-            createInfo.imageExtent = extent;
+            createInfo.imageFormat = m_format.format;
+            createInfo.imageColorSpace = m_format.colorSpace;
+            createInfo.imageExtent = m_extent;
             createInfo.imageArrayLayers = config::SwapchainImageArrayLayers;
             createInfo.imageUsage = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT;
 
@@ -80,6 +95,8 @@ namespace projectv
                 "VulkanSwapchain::create, Failed to create Swapchain !"
             );
             engine::LogInfo("VulkanSwapchain::create, Swapchain created successfully.");
+
+            retrieveImages();
         }
 
         bool VulkanSwapchain::check()
@@ -188,6 +205,22 @@ namespace projectv
             return imageCount;
         }
 
+        void VulkanSwapchain::retrieveImages()
+        {
+            uint32_t imageCount;
+
+            vkCheck(
+                vkGetSwapchainImagesKHR(m_logicalDevice, m_swapchain, &imageCount, nullptr),
+                "VulkanSwapchain::retrieveImages, Failed to get images.");
+            
+            engine::LogInfo(std::format( "VulkanSwapchain::retrieveImages, Retrieved {} vkImages.", imageCount));
+            m_images.resize(imageCount);
+
+            vkCheck(
+                vkGetSwapchainImagesKHR(m_logicalDevice, m_swapchain, &imageCount, m_images.data()),
+                "VulkanSwapchain::retrieveImages, Failed to get images.");
+        }
+
         void VulkanSwapchain::destroy()
         {
             if(m_physicalDevice != VK_NULL_HANDLE && m_logicalDevice != VK_NULL_HANDLE && m_surface != VK_NULL_HANDLE)
@@ -198,6 +231,11 @@ namespace projectv
                 m_physicalDevice = VK_NULL_HANDLE;
                 m_logicalDevice = VK_NULL_HANDLE;
                 m_surface = VK_NULL_HANDLE;
+
+                m_images.clear();
+
+                m_format = {};
+                m_extent = {};
             }
         }
     }

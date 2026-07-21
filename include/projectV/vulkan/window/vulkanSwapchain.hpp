@@ -4,6 +4,7 @@
 
 #include <vulkan/device/vulkanPhysicalDevice.hpp>
 
+#include <span>
 #include <vector>
 namespace projectv
 {
@@ -41,6 +42,29 @@ namespace projectv
              */
             [[nodiscard]]
             VkSwapchainKHR handle() const noexcept;
+
+            /**
+            * @brief Returns the underlying Vulkan format of swapchain.
+            * 
+            * @return Format of swapchain
+             */
+            [[nodiscard]]
+            const VkSurfaceFormatKHR& format() const noexcept;
+
+            /**
+            * @brief Returns the extent of swapchain.
+            * 
+            * @return Extent of swapchain
+             */
+            [[nodiscard]]
+            const VkExtent2D& extent() const noexcept;
+
+            /**
+            * @brief Get access to list of swapchain images.
+            * 
+            * @return Access to vkImages of swapchain list.
+             */
+            std::span<const VkImage> images() const noexcept;
 
             /**
              * @brief Creates the Vulkan swapchain.
@@ -109,6 +133,12 @@ namespace projectv
             uint32_t selectImageCount(const VkSurfaceCapabilitiesKHR& capabilities);
 
             /**
+            * @brief Retrive swapchain images
+            * 
+             */
+            void retrieveImages();
+            
+            /**
             * @brief Destroys the Vulkan swapchain.
             * 
              */
@@ -122,6 +152,12 @@ namespace projectv
             VkDevice m_logicalDevice = VK_NULL_HANDLE;
 
             VkSurfaceKHR m_surface = VK_NULL_HANDLE;
+
+            VkSurfaceFormatKHR m_format = {};
+
+            VkExtent2D m_extent = {};
+
+            std::vector<VkImage> m_images;
         };
     }
 }
