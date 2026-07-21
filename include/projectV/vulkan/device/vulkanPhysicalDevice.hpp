@@ -3,6 +3,8 @@
 #include <vulkan/vulkan.h>
 
 #include <vulkan/types/queueFamilies.hpp>
+
+#include <vector>
 namespace projectv
 {
     
@@ -23,11 +25,14 @@ namespace projectv
              */
             ~VulkanPhysicalDevice();
 
-            /**
-            * @brief 
-            * 
-             */
-            void select(VkInstance instance, VkSurfaceKHR surface);
+           /**
+           * @brief 
+           * 
+           * @param instance 
+           * @param surface 
+           * @param requiredDeviceExtensionList 
+            */
+            void select(VkInstance instance, VkSurfaceKHR surface, const std::vector<const char*>& requiredDeviceExtensionList);
 
             /**
             * @brief 
@@ -45,7 +50,7 @@ namespace projectv
             * @return 
             * @return 
             */
-            bool isDeviceSuitable(VkPhysicalDevice device, VkSurfaceKHR surface);
+            bool isDeviceSuitable(VkPhysicalDevice device, VkSurfaceKHR surface, const std::vector<const char*>& requiredDeviceExtensionList);
 
             /**
             * @brief 
@@ -54,6 +59,14 @@ namespace projectv
             * @return 
             */
             vulkan::types::QueueFamilies findQueueFamilies(VkPhysicalDevice device, VkSurfaceKHR surface);
+            
+            /**
+            * @brief Function to check if physical device supports required Device Extensions or not.
+            * 
+            * @param device Handle to physical device
+            * @return True if all required devices extensions are supported else false.
+             */
+            bool supportsDeviceExtensions(VkPhysicalDevice device, const std::vector<const char*>& deviceExtensions);
         private:
             /**
             * @brief 

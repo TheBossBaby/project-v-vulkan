@@ -33,7 +33,8 @@ namespace projectv
         {
             class IWindowSurface; 
             class VulkanSurface;
-         }
+            class VulkanSwapchain;
+        }
 
         class vulkanRenderer : public core::IRenderer
         {
@@ -69,6 +70,8 @@ namespace projectv
             std::unique_ptr<command::VulkanCommandPool> graphicsCommandPool;
 
             std::unique_ptr<sync::VulkanFence> graphicsFence;
+
+            std::unique_ptr<window::VulkanSwapchain> swapchain;
 
             core::IWindow* window = nullptr;
         };

@@ -11,6 +11,7 @@
 
 #include <vulkan/window/glfwWindowSurface.hpp>
 #include <vulkan/window/vulkanSurface.hpp>
+#include <vulkan/window/vulkanSwapchain.hpp>
 
 #include <memory>
 
@@ -63,6 +64,11 @@ namespace projectv
                 static std::unique_ptr<sync::VulkanFence> createFence()
                 {
                     return std::make_unique<sync::VulkanFence>();
+                }
+
+                static std::unique_ptr<window::VulkanSwapchain> createSwapchain()
+                {
+                    return std::make_unique<window::VulkanSwapchain>();
                 }
         };
     }

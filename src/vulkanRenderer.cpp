@@ -7,6 +7,7 @@
 
 #include <vulkan/vulkan.h>
 
+#include <vulkan/config/vulkanConfig.hpp>
 #include <vulkan/vulkanFactory.hpp>
 #include <vulkan/vulkanRenderer.hpp>
 
@@ -21,6 +22,7 @@
 #include <vulkan/util/windowExtension.hpp>
 
 #include <vulkan/window/vulkanSurface.hpp>
+#include <vulkan/window/vulkanSwapchain.hpp>
 
 namespace projectv
 {
@@ -46,11 +48,14 @@ namespace projectv
         logicalDevice = VulkanFactory::createLogicalDevice();
         graphicsCommandPool = VulkanFactory::createCommandPool();
         graphicsFence = VulkanFactory::createFence();
+        swapchain= VulkanFactory::createSwapchain();
 
         instance->create(*windowExtension.get());
+        
         windowSurface->create(instance->handle(), *windowSurfaceProvider.get(), *window);
-        physicalDevice->select(instance->handle(), windowSurface->handle());
-        logicalDevice->create(physicalDevice->handle(), physicalDevice->queueFamilies());
+        physicalDevice->select(instance->handle(), windowSurface->handle(), config::DeviceExtensions);
+        logicalDevice->create(physicalDevice->handle(), physicalDevice->queueFamilies(), config::DeviceExtensions);
+        swapchain->create(*physicalDevice.get(), logicalDevice->handle(), windowSurface->handle(), window->getWidth(), window->getHeight());
 
         graphicsCommandPool->create(logicalDevice->handle(), physicalDevice->queueFamilies().graphics.value());
         graphicsFence->create(logicalDevice->handle());
