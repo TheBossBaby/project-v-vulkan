@@ -3,6 +3,7 @@
 #include <vulkan/vulkan.h>
 
 #include <vulkan/device/vulkanPhysicalDevice.hpp>
+#include <vulkan/window/VulkanImageView.hpp>
 
 #include <span>
 #include <vector>
@@ -65,6 +66,17 @@ namespace projectv
             * @return Access to vkImages of swapchain list.
              */
             std::span<const VkImage> images() const noexcept;
+
+            /**
+             * @brief Returns the swapchain image views.
+             *
+             * Provides read-only access to the image views created for each
+             * swapchain image.
+             *
+             * @return Read-only span of swapchain image views.
+             */
+            [[nodiscard]]
+            std::span<const VulkanImageView> imageViews() const noexcept;
 
             /**
              * @brief Creates the Vulkan swapchain.
@@ -137,6 +149,12 @@ namespace projectv
             * 
              */
             void retrieveImages();
+
+            /**
+            * @brief Create a Image Views object
+            * 
+             */
+            void createImageViews();
             
             /**
             * @brief Destroys the Vulkan swapchain.
@@ -158,6 +176,8 @@ namespace projectv
             VkExtent2D m_extent = {};
 
             std::vector<VkImage> m_images;
+
+            std::vector<VulkanImageView> m_imageViews;
         };
     }
 }

@@ -42,6 +42,7 @@ add_library(projectv_vulkan STATIC
 
     include/projectV/vulkan/window/vulkanSurface.hpp
     include/projectV/vulkan/window/vulkanSwapchain.hpp
+    include/projectV/vulkan/window/VulkanImageView.hpp
     include/projectV/vulkan/window/windowSurface.hpp
     include/projectV/vulkan/window/glfwWindowSurface.hpp
 
@@ -59,6 +60,7 @@ add_library(projectv_vulkan STATIC
 
     src/window/vulkanSurface.cpp
     src/window/vulkanSwapchain.cpp
+    src/window/VulkanImageView.cpp
     src/window/windowSurface.cpp
     src/window/glfwWindowSurface.cpp
 )
