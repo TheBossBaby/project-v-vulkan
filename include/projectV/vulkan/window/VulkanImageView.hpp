@@ -1,9 +1,5 @@
 #pragma once
-#include <projectV/engine/logging/log.hpp>
-
 #include <vulkan/vulkan.h>
-
-#include <vulkan/device/vulkanPhysicalDevice.hpp>
 
 #include <span>
 #include <vector>

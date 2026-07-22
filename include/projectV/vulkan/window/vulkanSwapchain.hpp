@@ -151,8 +151,7 @@ namespace projectv
             void retrieveImages();
 
             /**
-            * @brief Create a Image Views object
-            * 
+             * @brief Creates image views for all swapchain images.
              */
             void createImageViews();
             

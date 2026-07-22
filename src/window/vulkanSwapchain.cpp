@@ -102,6 +102,7 @@ namespace projectv
             engine::LogInfo("VulkanSwapchain::create, Swapchain created successfully.");
 
             retrieveImages();
+            
             createImageViews();
         }
 
@@ -231,7 +232,7 @@ namespace projectv
         {
             m_imageViews.resize(m_images.size());
 
-            for (size_t i = 0; i < m_imageViews.size(); i++)
+            for (size_t i = 0; i < m_imageViews.size(); ++i)
             {
                 m_imageViews[i].create(
                     m_logicalDevice,
