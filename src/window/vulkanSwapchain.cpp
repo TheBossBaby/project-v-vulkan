@@ -42,6 +42,11 @@ namespace projectv
             return m_images;
         }
 
+        std::span<const VulkanImageView> VulkanSwapchain::imageViews() const noexcept
+        {
+            return m_imageViews;
+        }
+
         void VulkanSwapchain::create(const device::VulkanPhysicalDevice&  physicalDevice, VkDevice  logicalDevice, VkSurfaceKHR surface, uint32_t width, uint32_t height)
         {
             engine::LogInfo("VulkanSwapchain::create, Creating swapchain.");
@@ -97,6 +102,8 @@ namespace projectv
             engine::LogInfo("VulkanSwapchain::create, Swapchain created successfully.");
 
             retrieveImages();
+            
+            createImageViews();
         }
 
         bool VulkanSwapchain::check()
@@ -219,6 +226,34 @@ namespace projectv
             vkCheck(
                 vkGetSwapchainImagesKHR(m_logicalDevice, m_swapchain, &imageCount, m_images.data()),
                 "VulkanSwapchain::retrieveImages, Failed to get images.");
+        }
+
+        void VulkanSwapchain::createImageViews()
+        {
+            m_imageViews.resize(m_images.size());
+
+            for (size_t i = 0; i < m_imageViews.size(); ++i)
+            {
+                m_imageViews[i].create(
+                    m_logicalDevice,
+                    m_images[i],
+                    VK_IMAGE_VIEW_TYPE_2D,
+                    m_format.format,
+                    { 
+                        VK_COMPONENT_SWIZZLE_IDENTITY,
+                        VK_COMPONENT_SWIZZLE_IDENTITY,
+                        VK_COMPONENT_SWIZZLE_IDENTITY,
+                        VK_COMPONENT_SWIZZLE_IDENTITY 
+                    },
+                    { 
+                        VK_IMAGE_ASPECT_COLOR_BIT,
+                        0,
+                        1,
+                        0,
+                        1
+                    }
+                );
+            }
         }
 
         void VulkanSwapchain::destroy()
