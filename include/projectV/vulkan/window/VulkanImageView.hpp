@@ -1,8 +1,6 @@
 #pragma once
 #include <vulkan/vulkan.h>
 
-#include <span>
-#include <vector>
 namespace projectv
 {
     namespace vulkan::window
