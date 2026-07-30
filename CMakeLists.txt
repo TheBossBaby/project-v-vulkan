@@ -17,11 +17,13 @@ message(STATUS "Vulkan include dir: ${Vulkan_INCLUDE_DIRS}")
 message(STATUS "Vulkan libraries: ${Vulkan_LIBRARIES}")
 
 # Vulkan renderer library (no main)
-add_library(projectv_vulkan STATIC
-    src/vulkanRenderer.cpp
-    
+add_library(projectv_vulkan STATIC  
     include/projectV/vulkan/vulkanRenderer.hpp
     include/projectV/vulkan/vulkanFactory.hpp
+    include/projectV/vulkan/vulkanRenderPass.hpp
+    include/projectV/vulkan/rendererResources.hpp
+
+    include/projectV/vulkan/builder/vulkanRenderPassBuilder.hpp
 
     include/projectV/vulkan/config/vulkanConfig.hpp
     include/projectV/vulkan/command/vulkanCommandBuffer.hpp
@@ -45,6 +47,12 @@ add_library(projectv_vulkan STATIC
     include/projectV/vulkan/window/VulkanImageView.hpp
     include/projectV/vulkan/window/windowSurface.hpp
     include/projectV/vulkan/window/glfwWindowSurface.hpp
+
+    src/vulkanRenderer.cpp
+    src/vulkanRenderPass.cpp
+    src/rendererResources.cpp
+
+    src/builder/vulkanRenderPassBuilder.cpp
 
     src/command/vulkanCommandBuffer.cpp
     src/command/vulkanCommandPool.cpp

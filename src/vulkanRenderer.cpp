@@ -7,9 +7,12 @@
 
 #include <vulkan/vulkan.h>
 
+#include <vulkan/builder/VulkanRenderPassBuilder.hpp>
+
 #include <vulkan/config/vulkanConfig.hpp>
 #include <vulkan/vulkanFactory.hpp>
 #include <vulkan/vulkanRenderer.hpp>
+#include <vulkan/rendererResources.hpp>
 
 #include <vulkan/command/vulkanCommandBuffer.hpp>
 #include <vulkan/command/vulkanCommandPool.hpp>
@@ -28,6 +31,7 @@ namespace projectv
 {
     vulkan::vulkanRenderer::vulkanRenderer()
     {
+        renderResources = std::make_unique<RendererResources>();
     }
 
     vulkan::vulkanRenderer::~vulkanRenderer()
@@ -56,6 +60,8 @@ namespace projectv
         physicalDevice->select(instance->handle(), windowSurface->handle(), config::DeviceExtensions);
         logicalDevice->create(physicalDevice->handle(), physicalDevice->queueFamilies(), config::DeviceExtensions);
         swapchain->create(*physicalDevice.get(), logicalDevice->handle(), windowSurface->handle(), window->getWidth(), window->getHeight());
+        
+        createHelloTriangleRenderPass();
 
         graphicsCommandPool->create(logicalDevice->handle(), physicalDevice->queueFamilies().graphics.value());
         graphicsFence->create(logicalDevice->handle());
@@ -70,6 +76,7 @@ namespace projectv
         engine::LogInfo("vulkan::vulkanRenderer::Submitted");
         engine::LogInfo("vulkan::vulkanRenderer::Wait start");
 
+        
         graphicsFence->wait();
         engine::LogInfo("vulkan::vulkanRenderer::Reseting");
 
@@ -97,5 +104,22 @@ namespace projectv
 
     void vulkan::vulkanRenderer::waitIdle()
     {
+    }
+
+    void vulkan::vulkanRenderer::createHelloTriangleRenderPass()
+    {
+        vulkan::builder::VulkanRenderPassBuilder builder;
+
+        uint32_t colorIdx = builder.addColorAttachment(swapchain->format().format);
+
+        uint32_t subpass = builder.beginSubpass();
+        builder.addColorRef(subpass, colorIdx);
+
+        builder.addDependency(
+            VK_SUBPASS_EXTERNAL, subpass,
+            VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT, VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT,
+            0, VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT | VK_ACCESS_COLOR_ATTACHMENT_READ_BIT);
+
+        renderResources->renderPass() = builder.build(logicalDevice->handle());
     }
 }
