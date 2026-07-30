@@ -36,6 +36,8 @@ namespace projectv
             class VulkanSwapchain;
         }
 
+        class RendererResources;
+
         class vulkanRenderer : public core::IRenderer
         {
         public:
@@ -54,6 +56,8 @@ namespace projectv
             void endFrame() override;
 
             void waitIdle() override;
+
+            void createHelloTriangleRenderPass();
         private:
             std::unique_ptr<device::VulkanInstance> instance;
 
@@ -72,6 +76,8 @@ namespace projectv
             std::unique_ptr<sync::VulkanFence> graphicsFence;
 
             std::unique_ptr<window::VulkanSwapchain> swapchain;
+
+            std::unique_ptr<RendererResources> renderResources;
 
             core::IWindow* window = nullptr;
         };
