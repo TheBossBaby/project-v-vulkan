@@ -24,6 +24,7 @@ add_library(projectv_vulkan STATIC
     include/projectV/vulkan/rendererResources.hpp
 
     include/projectV/vulkan/builder/vulkanRenderPassBuilder.hpp
+    include/projectV/vulkan/builder/vulkanFramebufferBuilder.hpp
 
     include/projectV/vulkan/config/vulkanConfig.hpp
     include/projectV/vulkan/command/vulkanCommandBuffer.hpp
@@ -33,6 +34,8 @@ add_library(projectv_vulkan STATIC
     include/projectV/vulkan/device/vulkanInstance.hpp
     include/projectV/vulkan/device/vulkanPhysicalDevice.hpp
     include/projectV/vulkan/device/vulkanQueue.hpp
+
+    include/projectV/vulkan/rendererResources/vulkanFramebuffer.hpp
 
     include/projectV/vulkan/synchronization/vulkanFence.hpp
 
@@ -53,6 +56,7 @@ add_library(projectv_vulkan STATIC
     src/rendererResources.cpp
 
     src/builder/vulkanRenderPassBuilder.cpp
+    src/builder/vulkanFramebufferBuilder.cpp
 
     src/command/vulkanCommandBuffer.cpp
     src/command/vulkanCommandPool.cpp
@@ -61,6 +65,8 @@ add_library(projectv_vulkan STATIC
     src/device/vulkanInstance.cpp
     src/device/vulkanPhysicalDevice.cpp
     src/device/vulkanQueue.cpp
+
+    src/rendererResources/vulkanFramebuffer.cpp
 
     src/synchronization/vulkanFence.cpp
 
