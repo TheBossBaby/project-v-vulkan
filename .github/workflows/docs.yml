@@ -41,11 +41,27 @@ jobs:
       - name: Generate Doxygen documentation
         run: |
           doxygen docs/Doxyfile
+          
+      - name: Debug documentation output
+        run: |
+          echo "Current directory:"
+          pwd
 
-      - name: Upload Pages artifact
-        uses: actions/upload-pages-artifact@v3
-        with:
-          path: docs/html
+          echo ""
+          echo "Repository structure:"
+          ls -la
+          echo ""
+
+          echo "Docs folder:"
+          ls -R docs || true
+
+          echo ""
+          echo "Looking for index.html..."
+          find . -name index.html
+            - name: Upload Pages artifact
+              uses: actions/upload-pages-artifact@v3
+              with:
+                path: docs/html
 
   deploy:
     name: Deploy Documentation
