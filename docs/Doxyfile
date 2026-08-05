@@ -19,6 +19,25 @@ CALLER_GRAPH           = YES
 
 HAVE_DOT               = YES
 
-OUTPUT_DIRECTORY = docs
+# -----------------------------------------------------------------------------
+# Doxygen Awesome Theme
+# -----------------------------------------------------------------------------
+
+HTML_EXTRA_STYLESHEET = \
+    awesome/doxygen-awesome.css \
+    awesome/doxygen-awesome-sidebar-only.css \
+    custom.css
+
+HTML_EXTRA_FILES = \
+    awesome/doxygen-awesome-darkmode-toggle.js \
+    awesome/doxygen-awesome-fragment-copy-button.js \
+    awesome/doxygen-awesome-interactive-toc.js \
+    awesome/doxygen-awesome-paragraph-link.js \
+    awesome/doxygen-awesome-tabs.js
+
+GENERATE_TREEVIEW = YES
+FULL_SIDEBAR = YES
+
+OUTPUT_DIRECTORY = .
 
 HTML_OUTPUT      = html
