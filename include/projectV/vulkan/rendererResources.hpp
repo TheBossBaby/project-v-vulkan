@@ -21,7 +21,7 @@ namespace projectv
         private:
             VulkanRenderPass m_renderPass;
 
-            std::vector<rendererResources::VulkanFramebuffer> m_frameBuffers;
+            std::vector<rendererResources::VulkanFramebuffer> m_framebuffers;
         };
     }
 }
