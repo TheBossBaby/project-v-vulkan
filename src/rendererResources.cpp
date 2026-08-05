@@ -13,5 +13,15 @@ namespace projectv
         {
             return m_renderPass;
         }
+
+        std::vector<rendererResources::VulkanFramebuffer> &RendererResources::framebuffers()
+        {
+            return m_framebuffers;
+        }
+
+        const std::vector<rendererResources::VulkanFramebuffer> &RendererResources::framebuffers() const
+        {
+            return m_framebuffers;
+        }
     }
 }
