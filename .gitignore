@@ -44,7 +44,3 @@ test.txt
 **/nls.*.json
 **/*.nls.json
 **/*.nls.*.json
-
-**/html/
-**/xml/
-**/latex/
