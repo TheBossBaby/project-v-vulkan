@@ -8,6 +8,7 @@
 #include <vulkan/vulkan.h>
 
 #include <vulkan/builder/VulkanRenderPassBuilder.hpp>
+#include <vulkan/builder/vulkanFramebufferBuilder.hpp>
 
 #include <vulkan/config/vulkanConfig.hpp>
 #include <vulkan/vulkanFactory.hpp>
@@ -121,5 +122,25 @@ namespace projectv
             0, VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT | VK_ACCESS_COLOR_ATTACHMENT_READ_BIT);
 
         renderResources->renderPass() = builder.build(logicalDevice->handle());
+
+        // Create 1 Framebuffer per image view of swapchain used in render pass
+        const VkRenderPass renderPass = renderResources->renderPass().handle();
+        const VkExtent2D extent = swapchain->extent();
+
+        auto& framebuffers = renderResources->framebuffers();
+        framebuffers.reserve(swapchain->imageViews().size());
+
+        for (const auto& imageView : swapchain->imageViews())
+        {
+            builder::VulkanFramebufferBuilder fbBuilder;
+
+            fbBuilder
+                .setRenderPass(renderResources->renderPass().handle())
+                .addAttachment(imageView.handle())
+                .setExtent(swapchain->extent().width, swapchain->extent().height)
+                .setLayers(1);
+
+            framebuffers.push_back(fbBuilder.build(logicalDevice->handle()));
+        }      
     }
 }
