@@ -23,5 +23,15 @@ namespace projectv
         {
             return m_framebuffers;
         }
+
+        rendererResources::VulkanPipelineLayout &RendererResources::pipelineLayout()
+        {
+            return m_pipelineLayout;
+        }
+
+        const rendererResources::VulkanPipelineLayout &RendererResources::pipelineLayout() const
+        {
+            return m_pipelineLayout;
+        }
     }
 }
