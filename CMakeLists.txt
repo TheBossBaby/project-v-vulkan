@@ -29,6 +29,7 @@ add_library(projectv_vulkan STATIC
     include/projectV/vulkan/builder/vulkanShaderModuleBuilder.hpp
     include/projectV/vulkan/builder/vulkanPipelineLayoutBuilder.hpp
     include/projectV/vulkan/builder/vulkanGraphicsPipelineBuilder.hpp
+    include/projectV/vulkan/builder/vulkanShaderModuleBuilder.hpp
 
     include/projectV/vulkan/config/vulkanConfig.hpp
 
@@ -45,6 +46,7 @@ add_library(projectv_vulkan STATIC
     include/projectV/vulkan/rendererResources/vulkanShaderModule.hpp
     include/projectV/vulkan/rendererResources/vulkanPipelineLayout.hpp
     include/projectV/vulkan/rendererResources/vulkanGraphicsPipeline.hpp
+    include/projectV/vulkan/rendererResources/vulkanShaderModule.hpp
 
     include/projectV/vulkan/synchronization/vulkanFence.hpp
     include/projectV/vulkan/synchronization/vulkanSemaphore.hpp
@@ -73,6 +75,7 @@ add_library(projectv_vulkan STATIC
     src/builder/vulkanShaderModuleBuilder.cpp
     src/builder/vulkanPipelineLayoutBuilder.cpp
     src/builder/vulkanGraphicsPipelineBuilder.cpp
+    src/builder/vulkanShaderModuleBuilder.cpp
 
     src/command/vulkanCommandBuffer.cpp
     src/command/vulkanCommandPool.cpp
@@ -86,6 +89,7 @@ add_library(projectv_vulkan STATIC
     src/rendererResources/vulkanShaderModule.cpp
     src/rendererResources/vulkanPipelineLayout.cpp
     src/rendererResources/vulkanGraphicsPipeline.cpp
+    src/rendererResources/vulkanShaderModule.cpp
 
     src/synchronization/vulkanFence.cpp
     src/synchronization/vulkanSemaphore.cpp
