@@ -43,5 +43,15 @@ namespace projectv
         {
             return m_graphicsPipeline;
         }
+
+        rendererResources::VulkanPipelineLayout &RendererResources::pipelineLayout()
+        {
+            return m_pipelineLayout;
+        }
+
+        const rendererResources::VulkanPipelineLayout &RendererResources::pipelineLayout() const
+        {
+            return m_pipelineLayout;
+        }
     }
 }

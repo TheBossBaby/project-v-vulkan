@@ -4,6 +4,7 @@
 #include <vulkan/rendererResources/vulkanFramebuffer.hpp>
 #include <vulkan/rendererResources/vulkanPipelineLayout.hpp>
 #include <vulkan/rendererResources/vulkanGraphicsPipeline.hpp>
+#include <vulkan/rendererResources/vulkanPipelineLayout.hpp>
 
 #include <vector>
 namespace projectv
@@ -28,6 +29,10 @@ namespace projectv
             rendererResources::VulkanGraphicsPipeline& graphicsPipeline();
 
             const rendererResources::VulkanGraphicsPipeline& graphicsPipeline() const;
+
+            rendererResources::VulkanPipelineLayout& pipelineLayout();
+
+            const rendererResources::VulkanPipelineLayout& pipelineLayout() const;
         private:
             VulkanRenderPass m_renderPass;
 
@@ -36,6 +41,8 @@ namespace projectv
             rendererResources::VulkanPipelineLayout m_pipelineLayout;
 
             rendererResources::VulkanGraphicsPipeline m_graphicsPipeline;
+
+            rendererResources::VulkanPipelineLayout m_pipelineLayout;
         };
     }
 }
