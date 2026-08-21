@@ -3,6 +3,7 @@
 #include <vulkan/vulkanRenderPass.hpp>
 #include <vulkan/rendererResources/vulkanFramebuffer.hpp>
 #include <vulkan/rendererResources/vulkanPipelineLayout.hpp>
+#include <vulkan/rendererResources/vulkanGraphicsPipeline.hpp>
 
 #include <vector>
 namespace projectv
