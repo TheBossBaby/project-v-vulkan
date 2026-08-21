@@ -33,6 +33,18 @@ namespace projectv
             rendererResources::VulkanPipelineLayout& pipelineLayout();
 
             const rendererResources::VulkanPipelineLayout& pipelineLayout() const;
+
+            rendererResources::VulkanGraphicsPipeline& graphicsPipeline();
+
+            const rendererResources::VulkanGraphicsPipeline& graphicsPipeline() const;
+
+            rendererResources::VulkanPipelineLayout& pipelineLayout();
+
+            const rendererResources::VulkanPipelineLayout& pipelineLayout() const;
+
+            rendererResources::VulkanGraphicsPipeline& graphicsPipeline();
+
+            const rendererResources::VulkanGraphicsPipeline& graphicsPipeline() const;
         private:
             VulkanRenderPass m_renderPass;
 
@@ -43,6 +55,12 @@ namespace projectv
             rendererResources::VulkanGraphicsPipeline m_graphicsPipeline;
 
             rendererResources::VulkanPipelineLayout m_pipelineLayout;
+
+            rendererResources::VulkanGraphicsPipeline m_graphicsPipeline;
+
+            rendererResources::VulkanPipelineLayout m_pipelineLayout;
+
+            rendererResources::VulkanGraphicsPipeline m_graphicsPipeline;
         };
     }
 }
