@@ -23,12 +23,18 @@ namespace projectv
             rendererResources::VulkanPipelineLayout& pipelineLayout();
 
             const rendererResources::VulkanPipelineLayout& pipelineLayout() const;
+
+            rendererResources::VulkanGraphicsPipeline& graphicsPipeline();
+
+            const rendererResources::VulkanGraphicsPipeline& graphicsPipeline() const;
         private:
             VulkanRenderPass m_renderPass;
 
             std::vector<rendererResources::VulkanFramebuffer> m_framebuffers;
 
             rendererResources::VulkanPipelineLayout m_pipelineLayout;
+
+            rendererResources::VulkanGraphicsPipeline m_graphicsPipeline;
         };
     }
 }
