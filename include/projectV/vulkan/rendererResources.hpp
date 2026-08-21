@@ -4,7 +4,6 @@
 #include <vulkan/rendererResources/vulkanFramebuffer.hpp>
 #include <vulkan/rendererResources/vulkanPipelineLayout.hpp>
 #include <vulkan/rendererResources/vulkanGraphicsPipeline.hpp>
-#include <vulkan/rendererResources/vulkanPipelineLayout.hpp>
 
 #include <vector>
 namespace projectv
