@@ -1,5 +1,8 @@
 #include <rendererResources.hpp>
 
+#include <cstdint>
+#include <utility>
+
 namespace projectv
 {
     namespace vulkan
@@ -24,24 +27,25 @@ namespace projectv
             return m_framebuffers;
         }
 
-        rendererResources::VulkanPipelineLayout &RendererResources::pipelineLayout()
+        core::GraphicsPipelineHandle RendererResources::addGraphicsPipeline(
+            rendererResources::VulkanPipelineLayout layout,
+            rendererResources::VulkanGraphicsPipeline pipeline)
         {
-            return m_pipelineLayout;
+            core::GraphicsPipelineHandle handle;
+            handle.index = static_cast<std::uint32_t>(m_graphicsPipelines.size());
+
+            m_graphicsPipelines.push_back({ std::move(layout), std::move(pipeline) });
+
+            return handle;
         }
 
-        const rendererResources::VulkanPipelineLayout &RendererResources::pipelineLayout() const
+        const RendererResources::GraphicsPipelineEntry* RendererResources::graphicsPipeline(
+            core::GraphicsPipelineHandle handle) const
         {
-            return m_pipelineLayout;
-        }
+            if (!handle.isValid() || handle.index >= m_graphicsPipelines.size())
+                return nullptr;
 
-        rendererResources::VulkanGraphicsPipeline &RendererResources::graphicsPipeline()
-        {
-            return m_graphicsPipeline;
-        }
-
-        const rendererResources::VulkanGraphicsPipeline &RendererResources::graphicsPipeline() const
-        {
-            return m_graphicsPipeline;
+            return &m_graphicsPipelines[handle.index];
         }
 
         rendererResources::VulkanPipelineLayout &RendererResources::pipelineLayout()

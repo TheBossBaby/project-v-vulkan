@@ -1,14 +1,19 @@
 #include <projectV/core/transform.hpp>
+#include <projectV/core/shader.hpp>
 #include <projectV/core/shaderHandle.hpp>
 #include <projectV/core/meshHandle.hpp>
 
 #include <projectV/engine/graph/scene/ecs/world.hpp>
 #include <projectV/engine/logging/log.hpp>
+#include <projectV/engine/resource/shaderManager.hpp>
 
 #include <vulkan/vulkan.h>
 
 #include <vulkan/builder/VulkanRenderPassBuilder.hpp>
 #include <vulkan/builder/vulkanFramebufferBuilder.hpp>
+#include <vulkan/builder/vulkanShaderModuleBuilder.hpp>
+#include <vulkan/builder/vulkanPipelineLayoutBuilder.hpp>
+#include <vulkan/builder/vulkanGraphicsPipelineBuilder.hpp>
 
 #include <vulkan/config/vulkanConfig.hpp>
 #include <vulkan/vulkanFactory.hpp>
@@ -27,6 +32,8 @@
 
 #include <vulkan/window/vulkanSurface.hpp>
 #include <vulkan/window/vulkanSwapchain.hpp>
+
+#include <utility>
 
 namespace projectv
 {
@@ -97,6 +104,55 @@ namespace projectv
 
     void vulkan::vulkanRenderer::draw(const std::vector<core::Renderable>& items)
     {
+    }
+
+    core::GraphicsPipelineHandle vulkan::vulkanRenderer::createGraphicsPipeline(
+        const core::GraphicsPipelineDescription& description)
+    {
+        if (!shaderManager)
+        {
+            engine::LogError("vulkanRenderer::createGraphicsPipeline, no ShaderManager set");
+            return {};
+        }
+
+        const core::Shader* vertexShader = shaderManager->get(description.vertexShader);
+        if (!vertexShader)
+        {
+            engine::LogError("vulkanRenderer::createGraphicsPipeline, failed to resolve vertex shader handle");
+            return {};
+        }
+
+        const core::Shader* fragmentShader = shaderManager->get(description.fragmentShader);
+        if (!fragmentShader)
+        {
+            engine::LogError("vulkanRenderer::createGraphicsPipeline, failed to resolve fragment shader handle");
+            return {};
+        }
+
+        rendererResources::VulkanShaderModule vertexModule =
+            builder::VulkanShaderModuleBuilder().setCode(vertexShader->data).build(logicalDevice->handle());
+
+        rendererResources::VulkanShaderModule fragmentModule =
+            builder::VulkanShaderModuleBuilder().setCode(fragmentShader->data).build(logicalDevice->handle());
+
+        rendererResources::VulkanPipelineLayout layout =
+            builder::VulkanPipelineLayoutBuilder().build(logicalDevice->handle());
+
+        builder::VulkanGraphicsPipelineBuilder pipelineBuilder;
+        pipelineBuilder
+            .addShaderStage(vertexModule.handle(), VK_SHADER_STAGE_VERTEX_BIT)
+            .addShaderStage(fragmentModule.handle(), VK_SHADER_STAGE_FRAGMENT_BIT)
+            .setLayout(layout.handle())
+            .setRenderPass(renderResources->renderPass().handle());
+
+        rendererResources::VulkanGraphicsPipeline pipeline = pipelineBuilder.build(logicalDevice->handle());
+
+        return renderResources->addGraphicsPipeline(std::move(layout), std::move(pipeline));
+    }
+
+    void vulkan::vulkanRenderer::setShaderManager(engine::ShaderManager& inShaderManager)
+    {
+        shaderManager = &inShaderManager;
     }
 
     void vulkan::vulkanRenderer::endFrame()
