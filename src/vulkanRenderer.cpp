@@ -12,6 +12,8 @@
 #include <vulkan/builder/vulkanShaderModuleBuilder.hpp>
 #include <vulkan/builder/vulkanPipelineLayoutBuilder.hpp>
 #include <vulkan/builder/vulkanGraphicsPipelineBuilder.hpp>
+#include <vulkan/builder/vulkanPipelineLayoutBuilder.hpp>
+#include <vulkan/builder/vulkanGraphicsPipelineBuilder.hpp>
 
 #include <vulkan/config/vulkanConfig.hpp>
 #include <vulkan/vulkanFactory.hpp>
@@ -291,5 +293,12 @@ namespace projectv
             renderFinishedSemaphoreList.emplace_back();
             renderFinishedSemaphoreList.back().create(logicalDevice->handle());
         }
+    }
+
+    void vulkan::vulkanRenderer::createHelloTriangleGraphicsPipeline()
+    {
+        vulkan::builder::VulkanPipelineLayoutBuilder layoutBuilder;
+        auto pipelineLayout = layoutBuilder.build(logicalDevice.get().handle());
+        vulkan::builder::VulkanGraphicsPipelineBuilder gpBuilder;
     }
 }
