@@ -14,6 +14,8 @@
 #include <vulkan/builder/vulkanShaderModuleBuilder.hpp>
 #include <vulkan/builder/vulkanPipelineLayoutBuilder.hpp>
 #include <vulkan/builder/vulkanGraphicsPipelineBuilder.hpp>
+#include <vulkan/builder/vulkanPipelineLayoutBuilder.hpp>
+#include <vulkan/builder/vulkanGraphicsPipelineBuilder.hpp>
 
 #include <vulkan/config/vulkanConfig.hpp>
 #include <vulkan/vulkanFactory.hpp>
@@ -104,6 +106,17 @@ namespace projectv
 
     void vulkan::vulkanRenderer::draw(const std::vector<core::Renderable>& items)
     {
+        for (size_t i = 0; i < items.size(); i++)
+        {
+            auto graphicsPipelineHandle = createGraphicsPipeline(
+                {
+                    items[i].vertexShader,
+                    items[i].fragmentShader
+                }
+            );
+
+            auto pipelineLayout = 
+        }
     }
 
     core::GraphicsPipelineHandle vulkan::vulkanRenderer::createGraphicsPipeline(
@@ -198,5 +211,12 @@ namespace projectv
 
             framebuffers.push_back(fbBuilder.build(logicalDevice->handle()));
         }      
+    }
+
+    void vulkan::vulkanRenderer::createHelloTriangleGraphicsPipeline()
+    {
+        vulkan::builder::VulkanPipelineLayoutBuilder layoutBuilder;
+        auto pipelineLayout = layoutBuilder.build(logicalDevice.get().handle());
+        vulkan::builder::VulkanGraphicsPipelineBuilder gpBuilder;
     }
 }

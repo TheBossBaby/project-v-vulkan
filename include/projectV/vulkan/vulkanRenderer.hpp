@@ -1,6 +1,7 @@
 #pragma once
 
 #include <projectV/core/renderer.hpp>
+#include <vulkan/rendererResources/vulkanGraphicsPipeline.hpp>
 
 namespace projectv
 {
