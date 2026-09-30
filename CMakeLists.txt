@@ -20,6 +20,7 @@ message(STATUS "Vulkan libraries: ${Vulkan_LIBRARIES}")
 add_library(projectv_vulkan STATIC  
     include/projectV/vulkan/vulkanRenderer.hpp
     include/projectV/vulkan/vulkanFactory.hpp
+    include/projectV/vulkan/rendererFactory.hpp
     include/projectV/vulkan/vulkanRenderPass.hpp
     include/projectV/vulkan/rendererResources.hpp
 
@@ -59,6 +60,7 @@ add_library(projectv_vulkan STATIC
     include/projectV/vulkan/window/windowSurface.hpp
     include/projectV/vulkan/window/glfwWindowSurface.hpp
 
+    src/rendererFactory.cpp
     src/vulkanRenderer.cpp
     src/vulkanRenderPass.cpp
     src/rendererResources.cpp

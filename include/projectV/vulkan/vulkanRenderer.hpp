@@ -1,16 +1,9 @@
 #pragma once
 
 #include <projectV/core/renderer.hpp>
-#include <vulkan/rendererResources/vulkanGraphicsPipeline.hpp>
 
 namespace projectv
 {
-
-    namespace engine
-    {
-        class World;
-        class ShaderManager;
-    }
 
     namespace vulkan
     {
@@ -66,20 +59,6 @@ namespace projectv
 
             void createHelloTriangleRenderPass();
 
-            /**
-             * @brief Supplies the ShaderManager used to resolve shader handles
-             *        passed to createGraphicsPipeline().
-             *
-             * Must be called before any createGraphicsPipeline() call. Not part
-             * of the core::IRenderer interface, since core must not depend on
-             * the engine layer; callers that construct a vulkanRenderer
-             * concretely (as GameApp does) call this directly.
-             *
-             * @param shaderManager Engine-side shader storage. Borrowed; must
-             *                      outlive this renderer.
-             */
-            void setShaderManager(engine::ShaderManager& shaderManager);
-
         private:
             std::unique_ptr<device::VulkanInstance> instance;
 
@@ -102,8 +81,6 @@ namespace projectv
             std::unique_ptr<RendererResources> renderResources;
 
             core::IWindow* window = nullptr;
-
-            engine::ShaderManager* shaderManager = nullptr;
         };
     }
 }
