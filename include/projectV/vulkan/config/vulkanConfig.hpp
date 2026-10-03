@@ -19,6 +19,15 @@ namespace projectv
         };
 
         /**
+        * @brief List of required Validation Layers
+        * 
+        */
+        const std::vector<const char*> ValidationLayers = 
+        {
+            "VK_LAYER_KHRONOS_validation"
+        }; 
+
+        /**
         * @brief Prefered Swapchain Format
         * 
         */

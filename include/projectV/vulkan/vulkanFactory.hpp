@@ -9,6 +9,7 @@
 #include <vulkan/synchronization/VulkanFence.hpp>
 
 #include <vulkan/util/glfwWindowExtension.hpp>
+#include <vulkan/util/vulkanValidationLayerManager.hpp>
 
 #include <vulkan/window/glfwWindowSurface.hpp>
 #include <vulkan/window/vulkanSurface.hpp>
@@ -70,6 +71,11 @@ namespace projectv
                 static std::unique_ptr<window::VulkanSwapchain> createSwapchain()
                 {
                     return std::make_unique<window::VulkanSwapchain>();
+                }
+
+                static std::unique_ptr<util::VulkanValidationLayerManager> createValidationLayerManager()
+                {
+                    return std::make_unique<util::VulkanValidationLayerManager>();
                 }
         };
     }

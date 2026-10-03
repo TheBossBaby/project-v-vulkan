@@ -27,6 +27,7 @@
 #include <vulkan/device/vulkanQueue.hpp>
 
 #include <vulkan/util/windowExtension.hpp>
+#include <vulkan/util/vulkanValidationLayerManager.hpp>
 
 #include <vulkan/window/vulkanSurface.hpp>
 #include <vulkan/window/vulkanSwapchain.hpp>
@@ -59,8 +60,9 @@ namespace projectv
         graphicsCommandPool = VulkanFactory::createCommandPool();
         graphicsFence = VulkanFactory::createFence();
         swapchain= VulkanFactory::createSwapchain();
+        vulkanValidationLayerManager = VulkanFactory::createValidationLayerManager();
 
-        instance->create(*windowExtension.get());
+        instance->create(*windowExtension.get(), *vulkanValidationLayerManager.get());
         
         windowSurface->create(instance->handle(), *windowSurfaceProvider.get(), *window);
         physicalDevice->select(instance->handle(), windowSurface->handle(), config::DeviceExtensions);

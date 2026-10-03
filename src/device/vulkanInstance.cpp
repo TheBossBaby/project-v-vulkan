@@ -18,7 +18,7 @@ namespace projectv
             destroy();
         }
 
-        void VulkanInstance::create(const vulkan::util::IWindowExtension& windowExtension)
+        void VulkanInstance::create(const vulkan::util::IWindowExtension& windowExtension, vulkan::util::VulkanValidationLayerManager& validationLayerManager)
         {
             auto extensions = windowExtension.Extensions();
 
@@ -35,7 +35,15 @@ namespace projectv
             createInfo.pApplicationInfo = &appInfo;
             createInfo.enabledExtensionCount = static_cast<uint32_t>(extensions.size());
             createInfo.ppEnabledExtensionNames = extensions.data();
-            createInfo.enabledLayerCount = 0;
+
+            if(validationLayerManager.enableValidationLayer(config::ValidationLayers))
+            {
+                createInfo.enabledLayerCount = static_cast<uint32_t>(config::ValidationLayers.size());
+                createInfo.ppEnabledLayerNames = config::ValidationLayers.data();
+            }
+            else
+                createInfo.enabledLayerCount = 0;
+        
             vkCheck(vkCreateInstance(&createInfo, nullptr, &instance), 
             "Failed to create Vulkan Instance");
         }

@@ -25,7 +25,11 @@ namespace projectv
             class VulkanFence;
         }
 
-        namespace util { class IWindowExtension; }
+        namespace util 
+        { 
+            class IWindowExtension;
+            class VulkanValidationLayerManager; 
+        }
 
         namespace window 
         {
@@ -79,6 +83,8 @@ namespace projectv
             std::unique_ptr<window::VulkanSwapchain> swapchain;
 
             std::unique_ptr<RendererResources> renderResources;
+
+            std::unique_ptr<util::VulkanValidationLayerManager> vulkanValidationLayerManager;
 
             core::IWindow* window = nullptr;
         };
