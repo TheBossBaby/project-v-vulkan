@@ -28,7 +28,8 @@ namespace projectv
         namespace util 
         { 
             class IWindowExtension;
-            class VulkanValidationLayerManager; 
+            class VulkanValidationLayerManager;
+            class VulkanDebugMessenger;
         }
 
         namespace window 
@@ -65,6 +66,9 @@ namespace projectv
 
         private:
             std::unique_ptr<device::VulkanInstance> instance;
+
+            // Declared right after instance so it is destroyed just before it.
+            std::unique_ptr<util::VulkanDebugMessenger> debugMessenger;
 
             std::unique_ptr<util::IWindowExtension> windowExtension;
             

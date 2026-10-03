@@ -10,6 +10,7 @@
 
 #include <vulkan/util/glfwWindowExtension.hpp>
 #include <vulkan/util/vulkanValidationLayerManager.hpp>
+#include <vulkan/util/vulkanDebugMessenger.hpp>
 
 #include <vulkan/window/glfwWindowSurface.hpp>
 #include <vulkan/window/vulkanSurface.hpp>
@@ -76,6 +77,11 @@ namespace projectv
                 static std::unique_ptr<util::VulkanValidationLayerManager> createValidationLayerManager()
                 {
                     return std::make_unique<util::VulkanValidationLayerManager>();
+                }
+
+                static std::unique_ptr<util::VulkanDebugMessenger> createDebugMessenger()
+                {
+                    return std::make_unique<util::VulkanDebugMessenger>();
                 }
         };
     }

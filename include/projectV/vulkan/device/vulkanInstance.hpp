@@ -35,8 +35,15 @@ namespace projectv
             * @return Vulkan Instance Handle
             */
             VkInstance handle() const noexcept;
+
+            /**
+            * @brief Whether validation layers and VK_EXT_debug_utils were enabled on this instance.
+            */
+            bool validationEnabled() const noexcept;
             private:
             VkInstance instance = VK_NULL_HANDLE;
+
+            bool m_validationEnabled = false;
         };       
     }
 }

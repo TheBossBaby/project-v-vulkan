@@ -28,6 +28,7 @@
 
 #include <vulkan/util/windowExtension.hpp>
 #include <vulkan/util/vulkanValidationLayerManager.hpp>
+#include <vulkan/util/vulkanDebugMessenger.hpp>
 
 #include <vulkan/window/vulkanSurface.hpp>
 #include <vulkan/window/vulkanSwapchain.hpp>
@@ -63,6 +64,12 @@ namespace projectv
         vulkanValidationLayerManager = VulkanFactory::createValidationLayerManager();
 
         instance->create(*windowExtension.get(), *vulkanValidationLayerManager.get());
+
+        if (instance->validationEnabled())
+        {
+            debugMessenger = VulkanFactory::createDebugMessenger();
+            debugMessenger->create(instance->handle());
+        }
         
         windowSurface->create(instance->handle(), *windowSurfaceProvider.get(), *window);
         physicalDevice->select(instance->handle(), windowSurface->handle(), config::DeviceExtensions);
