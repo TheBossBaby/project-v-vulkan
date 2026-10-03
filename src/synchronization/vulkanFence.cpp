@@ -11,12 +11,15 @@ namespace projectv
             destroy();
         }
 
-        void VulkanFence::create(VkDevice device)
+        void VulkanFence::create(VkDevice device, bool startSignaled)
         {
             this->device = device;
 
             VkFenceCreateInfo fenceInfo{};
             fenceInfo.sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO;
+
+            if(startSignaled)
+                fenceInfo.flags |= VK_FENCE_CREATE_SIGNALED_BIT;
 
             vkCheck(vkCreateFence(this->device, &fenceInfo, nullptr, &fence), "VulkanFence::create, Failed to create fence!");
         }

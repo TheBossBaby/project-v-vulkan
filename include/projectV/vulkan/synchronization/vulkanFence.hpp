@@ -11,7 +11,7 @@ namespace projectv
         public:
             ~ VulkanFence();
 
-            void create(VkDevice device);
+            void create(VkDevice device, bool startSignaled);
 
             void destroy();
 

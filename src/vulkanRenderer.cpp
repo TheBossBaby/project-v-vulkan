@@ -79,7 +79,7 @@ namespace projectv
         createHelloTriangleRenderPass();
 
         graphicsCommandPool->create(logicalDevice->handle(), physicalDevice->queueFamilies().graphics.value());
-        graphicsFence->create(logicalDevice->handle());
+        graphicsFence->create(logicalDevice->handle(), false);
 
         command::VulkanCommandBuffer testCommandBuffer = graphicsCommandPool->allocate(VK_COMMAND_BUFFER_LEVEL_PRIMARY);
         testCommandBuffer.begin();
