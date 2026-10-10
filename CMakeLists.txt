@@ -47,6 +47,7 @@ add_library(projectv_vulkan STATIC
     include/projectV/vulkan/rendererResources/vulkanGraphicsPipeline.hpp
 
     include/projectV/vulkan/synchronization/vulkanFence.hpp
+    include/projectV/vulkan/synchronization/vulkanSemaphore.hpp
 
     include/projectV/vulkan/types/queueFamilies.hpp
 
@@ -87,6 +88,7 @@ add_library(projectv_vulkan STATIC
     src/rendererResources/vulkanGraphicsPipeline.cpp
 
     src/synchronization/vulkanFence.cpp
+    src/synchronization/vulkanSemaphore.cpp
 
     src/util/glfwWindowExtension.cpp
     src/util/vulkanValidationLayerManager.cpp
