@@ -292,4 +292,16 @@ namespace projectv
             renderFinishedSemaphoreList.back().create(logicalDevice->handle());
         }
     }
+    
+    void vulkan::vulkanRenderer::createRenderFinishedSemaphores()
+    {
+        renderFinishedSemaphoreList.clear();
+        renderFinishedSemaphoreList.reserve(swapchain->imageViews().size());     
+        
+        for(size_t i = 0; i < swapchain->imageViews().size() ; i++)
+        {
+            renderFinishedSemaphoreList.emplace_back();
+            renderFinishedSemaphoreList.back().create(logicalDevice->handle());
+        }
+    }
 }
