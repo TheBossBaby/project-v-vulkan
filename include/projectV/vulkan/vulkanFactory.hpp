@@ -6,7 +6,8 @@
 #include <vulkan/device/vulkanInstance.hpp>
 #include <vulkan/device/vulkanPhysicalDevice.hpp>
 
-#include <vulkan/synchronization/VulkanFence.hpp>
+#include <vulkan/synchronization/vulkanFence.hpp>
+#include <vulkan/synchronization/vulkanSemaphore.hpp>
 
 #include <vulkan/util/glfwWindowExtension.hpp>
 #include <vulkan/util/vulkanValidationLayerManager.hpp>
@@ -82,6 +83,11 @@ namespace projectv
                 static std::unique_ptr<util::VulkanDebugMessenger> createDebugMessenger()
                 {
                     return std::make_unique<util::VulkanDebugMessenger>();
+                }
+                
+                static std::unique_ptr<sync::VulkanSemaphore> createVulkanSemaphore()
+                {
+                    return std::make_unique<sync::VulkanSemaphore>();
                 }
         };
     }

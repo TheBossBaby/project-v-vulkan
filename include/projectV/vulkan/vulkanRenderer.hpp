@@ -2,6 +2,8 @@
 
 #include <projectV/core/renderer.hpp>
 
+#include <vector>
+
 namespace projectv
 {
 
@@ -23,6 +25,7 @@ namespace projectv
         namespace sync
         {
             class VulkanFence;
+            class VulkanSemaphore;
         }
 
         namespace util 
@@ -62,8 +65,10 @@ namespace projectv
 
             void waitIdle() override;
 
+        private:
             void createHelloTriangleRenderPass();
 
+            void createRenderFinishedSemaphores();
         private:
             std::unique_ptr<device::VulkanInstance> instance;
 
@@ -82,7 +87,7 @@ namespace projectv
 
             std::unique_ptr<command::VulkanCommandPool> graphicsCommandPool;
 
-            std::unique_ptr<sync::VulkanFence> graphicsFence;
+            std::unique_ptr<sync::VulkanFence> inFlight;
 
             std::unique_ptr<window::VulkanSwapchain> swapchain;
 
@@ -91,6 +96,16 @@ namespace projectv
             std::unique_ptr<util::VulkanValidationLayerManager> vulkanValidationLayerManager;
 
             core::IWindow* window = nullptr;
+
+            std::unique_ptr<command::VulkanCommandBuffer> commandBuffer;
+
+            std::unique_ptr<sync::VulkanSemaphore> imageAvailableSemaphore;
+
+            std::vector<sync::VulkanSemaphore> renderFinishedSemaphoreList;
+
+            uint32_t currentImageIndex = UINT32_MAX;
+
+            bool isFrameRunning = false;
         };
     }
 }

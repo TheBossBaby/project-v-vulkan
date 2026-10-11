@@ -27,6 +27,7 @@
 #include <vulkan/device/vulkanQueue.hpp>
 
 #include <vulkan/util/windowExtension.hpp>
+#include <vulkan/util/vulkanCheck.hpp>
 #include <vulkan/util/vulkanValidationLayerManager.hpp>
 #include <vulkan/util/vulkanDebugMessenger.hpp>
 
@@ -44,6 +45,7 @@ namespace projectv
 
     vulkan::vulkanRenderer::~vulkanRenderer()
     {
+        waitIdle();
         window = nullptr;
     }
 
@@ -59,9 +61,10 @@ namespace projectv
         physicalDevice = VulkanFactory::createPhysicalDevice();
         logicalDevice = VulkanFactory::createLogicalDevice();
         graphicsCommandPool = VulkanFactory::createCommandPool();
-        graphicsFence = VulkanFactory::createFence();
         swapchain= VulkanFactory::createSwapchain();
         vulkanValidationLayerManager = VulkanFactory::createValidationLayerManager();
+        imageAvailableSemaphore = VulkanFactory::createVulkanSemaphore();
+        inFlight = VulkanFactory::createFence();
 
         instance->create(*windowExtension.get(), *vulkanValidationLayerManager.get());
 
@@ -76,27 +79,17 @@ namespace projectv
         logicalDevice->create(physicalDevice->handle(), physicalDevice->queueFamilies(), config::DeviceExtensions);
         swapchain->create(*physicalDevice.get(), logicalDevice->handle(), windowSurface->handle(), window->getWidth(), window->getHeight());
         
+        imageAvailableSemaphore->create(logicalDevice->handle());
+        createRenderFinishedSemaphores();
+        
+        inFlight->create(logicalDevice->handle(), true);
+
         createHelloTriangleRenderPass();
 
         graphicsCommandPool->create(logicalDevice->handle(), physicalDevice->queueFamilies().graphics.value());
-        graphicsFence->create(logicalDevice->handle(), false);
 
-        command::VulkanCommandBuffer testCommandBuffer = graphicsCommandPool->allocate(VK_COMMAND_BUFFER_LEVEL_PRIMARY);
-        testCommandBuffer.begin();
-        testCommandBuffer.end();
-
-        engine::LogInfo("vulkan::vulkanRenderer::Submiting");
-
-        logicalDevice->graphicsQueue().submit(testCommandBuffer, *graphicsFence.get());
-        engine::LogInfo("vulkan::vulkanRenderer::Submitted");
-        engine::LogInfo("vulkan::vulkanRenderer::Wait start");
-
-        
-        graphicsFence->wait();
-        engine::LogInfo("vulkan::vulkanRenderer::Reseting");
-
-        graphicsFence->reset();
-        engine::LogInfo("vulkan::vulkanRenderer::Reset done");        
+        commandBuffer = std::make_unique<command::VulkanCommandBuffer>(
+            graphicsCommandPool->allocate(VK_COMMAND_BUFFER_LEVEL_PRIMARY));
         return true;
     }
 
@@ -111,6 +104,11 @@ namespace projectv
 
     void vulkan::vulkanRenderer::draw(const std::vector<core::Renderable>& items)
     {
+        if(!isFrameRunning)
+        {
+            engine::LogTrace("vulkan::vulkanRenderer::draw, Frame is not running, skipping draw command");
+            return;
+        }
         for (size_t i = 0; i < items.size(); i++)
         {
             auto graphicsPipeline = renderResources->graphicsPipeline(items[i].graphicsPipelineHandle);
@@ -156,10 +154,21 @@ namespace projectv
 
     void vulkan::vulkanRenderer::endFrame()
     {
+        if(!isFrameRunning)
+        {
+            engine::LogTrace("vulkan::vulkanRenderer::endFrame, Frame is not running, skipping endFrame");
+            return;
+        }
     }
 
     void vulkan::vulkanRenderer::waitIdle()
     {
+        if(!logicalDevice.get() || logicalDevice->handle() == VK_NULL_HANDLE)
+        {
+            engine::LogTrace("vulkan::vulkanRenderer::waitIdle, waitIdle is not running as logical device is not created or it's vulkan Handle is NULL");
+            return;
+        }
+        vkCheck(vkDeviceWaitIdle(logicalDevice->handle()), "vulkan::vulkanRenderer::waitIdle, Wait Ideal failed !");
     }
 
     void vulkan::vulkanRenderer::createHelloTriangleRenderPass()
@@ -197,5 +206,17 @@ namespace projectv
 
             framebuffers.push_back(fbBuilder.build(logicalDevice->handle()));
         }      
+    }
+    
+    void vulkan::vulkanRenderer::createRenderFinishedSemaphores()
+    {
+        renderFinishedSemaphoreList.clear();
+        renderFinishedSemaphoreList.reserve(swapchain->imageViews().size());     
+        
+        for(size_t i = 0; i < swapchain->imageViews().size() ; i++)
+        {
+            renderFinishedSemaphoreList.emplace_back();
+            renderFinishedSemaphoreList.back().create(logicalDevice->handle());
+        }
     }
 }
