@@ -12,7 +12,6 @@ namespace projectv
         namespace command
         {
             class VulkanCommandPool;
-            class VulkanCommandBuffer;
         }
 
         namespace device
@@ -24,7 +23,6 @@ namespace projectv
 
         namespace sync
         {
-            class VulkanFence;
             class VulkanSemaphore;
         }
 
@@ -43,6 +41,8 @@ namespace projectv
         }
 
         class RendererResources;
+
+        struct FrameData;
 
         class vulkanRenderer : public core::IRenderer
         {
@@ -71,6 +71,8 @@ namespace projectv
             void createSwapchainFramebuffers();
 
             void createRenderFinishedSemaphores();
+
+            void createFrameData();
         private:
             std::unique_ptr<device::VulkanInstance> instance;
 
@@ -89,8 +91,6 @@ namespace projectv
 
             std::unique_ptr<command::VulkanCommandPool> graphicsCommandPool;
 
-            std::unique_ptr<sync::VulkanFence> inFlight;
-
             std::unique_ptr<window::VulkanSwapchain> swapchain;
 
             std::unique_ptr<RendererResources> renderResources;
@@ -99,10 +99,6 @@ namespace projectv
 
             core::IWindow* window = nullptr;
 
-            std::unique_ptr<command::VulkanCommandBuffer> commandBuffer;
-
-            std::unique_ptr<sync::VulkanSemaphore> imageAvailableSemaphore;
-
             std::vector<sync::VulkanSemaphore> renderFinishedSemaphoreList;
 
             uint32_t currentImageIndex = UINT32_MAX;
@@ -110,6 +106,8 @@ namespace projectv
             uint32_t currentFrame = 0;
 
             bool isFrameRunning = false;
+
+            std::vector<FrameData> frames;
         };
     }
 }

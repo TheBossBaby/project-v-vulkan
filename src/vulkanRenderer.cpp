@@ -17,8 +17,8 @@
 #include <vulkan/vulkanFactory.hpp>
 #include <vulkan/vulkanRenderer.hpp>
 #include <vulkan/rendererResources.hpp>
+#include <vulkan/frameData.hpp>
 
-#include <vulkan/command/vulkanCommandBuffer.hpp>
 #include <vulkan/command/vulkanCommandPool.hpp>
 
 #include <vulkan/device/vulkanDevice.hpp>
@@ -70,8 +70,6 @@ namespace projectv
         graphicsCommandPool = VulkanFactory::createCommandPool();
         swapchain= VulkanFactory::createSwapchain();
         vulkanValidationLayerManager = VulkanFactory::createValidationLayerManager();
-        imageAvailableSemaphore = VulkanFactory::createVulkanSemaphore();
-        inFlight = VulkanFactory::createFence();
 
         instance->create(*windowExtension.get(), *vulkanValidationLayerManager.get());
 
@@ -86,18 +84,14 @@ namespace projectv
         logicalDevice->create(physicalDevice->handle(), physicalDevice->queueFamilies(), config::DeviceExtensions);
         swapchain->create(*physicalDevice.get(), logicalDevice->handle(), windowSurface->handle(), window->getWidth(), window->getHeight());
         
-        imageAvailableSemaphore->create(logicalDevice->handle());
         createRenderFinishedSemaphores();
-        
-        inFlight->create(logicalDevice->handle(), true);
-
         createSwapchainRenderPass();
         createSwapchainFramebuffers();
 
         graphicsCommandPool->create(logicalDevice->handle(), physicalDevice->queueFamilies().graphics.value());
 
-        commandBuffer = std::make_unique<command::VulkanCommandBuffer>(
-            graphicsCommandPool->allocate(VK_COMMAND_BUFFER_LEVEL_PRIMARY));
+        createFrameData();
+
         return true;
     }
 
@@ -114,9 +108,11 @@ namespace projectv
         clearValue.color.float32[2] = renderView.clearColor.z;
         clearValue.color.float32[3] = renderView.clearColor.w;
 
-        inFlight->wait();
+        FrameData& frame = frames[currentFrame];
+
+        frame.inFlight.wait();
         
-        auto result = swapchain->acquireNextImage(*imageAvailableSemaphore, currentImageIndex);
+        auto result = swapchain->acquireNextImage(frame.imageAvailableSemaphore, currentImageIndex);
 
         if(result == VK_ERROR_OUT_OF_DATE_KHR)
         {
@@ -124,18 +120,18 @@ namespace projectv
             return;
         }
 
-        inFlight->reset();
+        frame.inFlight.reset();
 
         
-        commandBuffer->begin();
+        frame.commandBuffer.begin();
     
-        commandBuffer->beginRenderPass(
+        frame.commandBuffer.beginRenderPass(
             renderResources->renderPass(), 
             renderResources->framebuffers().at(currentImageIndex), 
             {{0, 0}, swapchain->extent()},
             std::span(&clearValue, 1));
         
-        commandBuffer->setViewport(
+        frame.commandBuffer.setViewport(
             0.0f,
             0.0f,
             static_cast<float>(swapchain->extent().width),
@@ -143,7 +139,7 @@ namespace projectv
             0.0f,
             1.0f);
 
-        commandBuffer->setScissor(
+        frame.commandBuffer.setScissor(
             {0, 0},
             swapchain->extent());
         
@@ -159,6 +155,7 @@ namespace projectv
         }
 
         VkPipeline previousGraphicsPipeline = VK_NULL_HANDLE;
+        FrameData& frame = frames[currentFrame];
 
         for (size_t i = 0; i < items.size(); i++)
         {
@@ -168,10 +165,10 @@ namespace projectv
             if(previousGraphicsPipeline != graphicsPipeline->pipeline.handle())
             {
                 previousGraphicsPipeline = graphicsPipeline->pipeline.handle();
-                commandBuffer->bindGraphicsPipeline(graphicsPipeline->pipeline);
+                frame.commandBuffer.bindGraphicsPipeline(graphicsPipeline->pipeline);
             }
             
-            commandBuffer->draw(3, 1, 0, 0);
+            frame.commandBuffer.draw(3, 1, 0, 0);
         }
     }
 
@@ -219,9 +216,11 @@ namespace projectv
             return;
         }
 
-        commandBuffer->endRenderPass();
-        commandBuffer->end();
-        logicalDevice->graphicsQueue().submit(*commandBuffer, *imageAvailableSemaphore, VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT, renderFinishedSemaphoreList[currentImageIndex], *inFlight);
+        FrameData& frame = frames[currentFrame];
+
+        frame.commandBuffer.endRenderPass();
+        frame.commandBuffer.end();
+        logicalDevice->graphicsQueue().submit(frame.commandBuffer, frame.imageAvailableSemaphore, VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT, renderFinishedSemaphoreList[currentImageIndex], frame.inFlight);
         auto presentationResult = logicalDevice->presentQueue().present(*swapchain, currentImageIndex, renderFinishedSemaphoreList[currentImageIndex]);
         if(presentationResult != VK_SUCCESS)
         {
@@ -292,6 +291,21 @@ namespace projectv
         {
             renderFinishedSemaphoreList.emplace_back();
             renderFinishedSemaphoreList.back().create(logicalDevice->handle());
+        }
+    }
+
+    void vulkan::vulkanRenderer::createFrameData()
+    {
+        frames.clear();
+        frames.reserve(config::MaxFramesInFlight);
+
+        for (std::uint32_t i = 0; i < config::MaxFramesInFlight; ++i)
+        {
+            FrameData& frame = frames.emplace_back(
+                graphicsCommandPool->allocate(VK_COMMAND_BUFFER_LEVEL_PRIMARY));
+
+            frame.inFlight.create(logicalDevice->handle(), true);
+            frame.imageAvailableSemaphore.create(logicalDevice->handle());
         }
     }
 }

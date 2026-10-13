@@ -23,6 +23,7 @@ add_library(projectv_vulkan STATIC
     include/projectV/vulkan/rendererFactory.hpp
     include/projectV/vulkan/vulkanRenderPass.hpp
     include/projectV/vulkan/rendererResources.hpp
+    include/projectV/vulkan/frameData.hpp
 
     include/projectV/vulkan/builder/vulkanRenderPassBuilder.hpp
     include/projectV/vulkan/builder/vulkanFramebufferBuilder.hpp
