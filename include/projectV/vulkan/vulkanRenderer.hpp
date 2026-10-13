@@ -66,7 +66,9 @@ namespace projectv
             void waitIdle() override;
 
         private:
-            void createHelloTriangleRenderPass();
+            void createSwapchainRenderPass();
+
+            void createSwapchainFramebuffers();
 
             void createRenderFinishedSemaphores();
         private:
