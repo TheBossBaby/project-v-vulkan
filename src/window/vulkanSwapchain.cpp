@@ -4,6 +4,9 @@
 
 #include <vulkan/config/vulkanConfig.hpp>
 
+#include <vulkan/synchronization/vulkanSemaphore.hpp>
+#include <vulkan/synchronization/vulkanFence.hpp>
+
 #include <vulkan/util/vulkanCheck.hpp>
 
 #include <algorithm>
@@ -104,6 +107,16 @@ namespace projectv
             retrieveImages();
             
             createImageViews();
+        }
+
+        VkResult VulkanSwapchain::acquireNextImage(const sync::VulkanSemaphore& semaphore, uint32_t& outImageIndex)
+        {
+            return acquireNextImageInternal(semaphore.handle(), VK_NULL_HANDLE, outImageIndex);
+        }
+
+        VkResult VulkanSwapchain::acquireNextImage(const sync::VulkanSemaphore& semaphore, const sync::VulkanFence& fence, uint32_t& outImageIndex)
+        {
+            return acquireNextImageInternal(semaphore.handle(), fence.handle(), outImageIndex);
         }
 
         bool VulkanSwapchain::check()
@@ -272,6 +285,15 @@ namespace projectv
                 m_format = {};
                 m_extent = {};
             }
+        }
+
+        VkResult VulkanSwapchain::acquireNextImageInternal(VkSemaphore semaphore, VkFence fence, uint32_t& outImageIndex)
+        {
+            const VkResult result = vkAcquireNextImageKHR(m_logicalDevice, m_swapchain, UINT64_MAX,
+                                                        semaphore, fence, &outImageIndex);
+            if (result != VK_ERROR_OUT_OF_DATE_KHR && result != VK_SUBOPTIMAL_KHR)
+                vkCheck(result, "VulkanSwapchain::acquireNextImage, failed to acquire swapchain image");
+            return result;
         }
     }
 }

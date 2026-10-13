@@ -9,6 +9,12 @@
 #include <vector>
 namespace projectv
 {
+    namespace vulkan::sync 
+    {
+        class VulkanFence;
+        class VulkanSemaphore; 
+    }
+
     namespace vulkan::window
     {
         /**
@@ -89,6 +95,55 @@ namespace projectv
              * @param surface Window presentation surface.
              */
             void create(const device::VulkanPhysicalDevice& physicalDevice, VkDevice  logicalDevice, VkSurfaceKHR surface, uint32_t width, uint32_t height);
+
+            /**
+             * @brief Acquires the next presentable swapchain image.
+             *
+             * Returns as soon as an image index is known, but the image may
+             * still be in use by the presentation engine. @p semaphore is
+             * signaled once the image is actually ready, so GPU work that
+             * writes to it must wait on @p semaphore.
+             *
+             * Waits with no timeout.
+             *
+             * @param semaphore Unsignaled semaphore, signaled when the image
+             *                  is ready to be rendered to.
+             * @param outImageIndex Receives the index of the acquired image.
+             *                      Only valid if the result is VK_SUCCESS or
+             *                      VK_SUBOPTIMAL_KHR.
+             * @return VK_SUCCESS if an image was acquired.
+             *         VK_SUBOPTIMAL_KHR if an image was acquired but the
+             *         swapchain no longer matches the surface exactly; the
+             *         image is usable, but the swapchain should be recreated.
+             *         VK_ERROR_OUT_OF_DATE_KHR if no image was acquired and
+             *         the swapchain must be recreated before rendering.
+             * @throws std::runtime_error For any other acquisition failure.
+             */
+            [[nodiscard]]
+            VkResult acquireNextImage(const sync::VulkanSemaphore& semaphore, uint32_t& outImageIndex);
+
+            /**
+             * @brief Acquires the next presentable swapchain image, also
+             *        signaling a fence.
+             *
+             * Same as acquireNextImage(const sync::VulkanSemaphore&, uint32_t&),
+             * except @p fence is also signaled once the image is ready. Use
+             * the fence when the CPU needs to know the image is free, for
+             * example before writing to it from the host.
+             *
+             * @param semaphore Unsignaled semaphore, signaled when the image
+             *                  is ready to be rendered to.
+             * @param fence Unsignaled fence, signaled when the image is ready
+             *              to be rendered to.
+             * @param outImageIndex Receives the index of the acquired image.
+             *                      Only valid if the result is VK_SUCCESS or
+             *                      VK_SUBOPTIMAL_KHR.
+             * @return VK_SUCCESS, VK_SUBOPTIMAL_KHR or VK_ERROR_OUT_OF_DATE_KHR,
+             *         with the same meaning as the semaphore-only overload.
+             * @throws std::runtime_error For any other acquisition failure.
+             */
+            [[nodiscard]]
+            VkResult acquireNextImage(const sync::VulkanSemaphore& semaphore, const sync::VulkanFence& fence ,uint32_t& outImageIndex);
         private:
             /**
              * @brief Verifies that swapchain creation is supported.
@@ -161,6 +216,23 @@ namespace projectv
              */
             void destroy();
 
+            /**
+             * @brief Shared implementation of both acquireNextImage overloads.
+             *
+             * Calls vkAcquireNextImageKHR with no timeout and passes
+             * VK_ERROR_OUT_OF_DATE_KHR and VK_SUBOPTIMAL_KHR back to the caller
+             * instead of treating them as errors.
+             *
+             * @param semaphore Semaphore to signal, or VK_NULL_HANDLE.
+             * @param fence Fence to signal, or VK_NULL_HANDLE. At least one of
+             *              @p semaphore and @p fence must be a valid handle.
+             * @param outImageIndex Receives the index of the acquired image.
+             * @return Result of vkAcquireNextImageKHR.
+             * @throws std::runtime_error For any result other than VK_SUCCESS,
+             *         VK_SUBOPTIMAL_KHR or VK_ERROR_OUT_OF_DATE_KHR.
+             */
+            [[nodiscard]]
+            VkResult acquireNextImageInternal(VkSemaphore semaphore, VkFence fence, uint32_t& outImageIndex);
         private:
             VkSwapchainKHR m_swapchain = VK_NULL_HANDLE;
             
