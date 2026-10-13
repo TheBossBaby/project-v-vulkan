@@ -226,7 +226,9 @@ namespace projectv
         if(presentationResult != VK_SUCCESS)
         {
             engine::LogWarn("vulkan::vulkanRenderer::endFrame, Swapchain must be recreated");
-        }        
+        }
+        
+        currentFrame = (currentFrame + 1) % config::MaxFramesInFlight;        
         isFrameRunning = false;
     }
 

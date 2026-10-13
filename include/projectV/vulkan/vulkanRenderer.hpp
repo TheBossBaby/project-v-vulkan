@@ -107,6 +107,8 @@ namespace projectv
 
             uint32_t currentImageIndex = UINT32_MAX;
 
+            uint32_t currentFrame = 0;
+
             bool isFrameRunning = false;
         };
     }
