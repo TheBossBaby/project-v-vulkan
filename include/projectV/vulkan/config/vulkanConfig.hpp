@@ -19,6 +19,25 @@ namespace projectv
         };
 
         /**
+        * @brief Validation layers and the debug messenger are only enabled in Debug builds.
+        *
+        */
+#ifdef NDEBUG
+        constexpr bool EnableValidationLayers = false;
+#else
+        constexpr bool EnableValidationLayers = true;
+#endif
+
+        /**
+        * @brief List of required Validation Layers
+        * 
+        */
+        const std::vector<const char*> ValidationLayers = 
+        {
+            "VK_LAYER_KHRONOS_validation"
+        }; 
+
+        /**
         * @brief Prefered Swapchain Format
         * 
         */

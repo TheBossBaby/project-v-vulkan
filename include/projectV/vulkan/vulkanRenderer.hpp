@@ -2,14 +2,10 @@
 
 #include <projectV/core/renderer.hpp>
 
+#include <vector>
+
 namespace projectv
 {
-
-    namespace engine
-    {
-        class World;
-        class ShaderManager;
-    }
 
     namespace vulkan
     {
@@ -29,9 +25,15 @@ namespace projectv
         namespace sync
         {
             class VulkanFence;
+            class VulkanSemaphore;
         }
 
-        namespace util { class IWindowExtension; }
+        namespace util 
+        { 
+            class IWindowExtension;
+            class VulkanValidationLayerManager;
+            class VulkanDebugMessenger;
+        }
 
         namespace window 
         {
@@ -63,24 +65,17 @@ namespace projectv
 
             void waitIdle() override;
 
-            void createHelloTriangleRenderPass();
+        private:
+            void createSwapchainRenderPass();
 
-            /**
-             * @brief Supplies the ShaderManager used to resolve shader handles
-             *        passed to createGraphicsPipeline().
-             *
-             * Must be called before any createGraphicsPipeline() call. Not part
-             * of the core::IRenderer interface, since core must not depend on
-             * the engine layer; callers that construct a vulkanRenderer
-             * concretely (as GameApp does) call this directly.
-             *
-             * @param shaderManager Engine-side shader storage. Borrowed; must
-             *                      outlive this renderer.
-             */
-            void setShaderManager(engine::ShaderManager& shaderManager);
+            void createSwapchainFramebuffers();
 
+            void createRenderFinishedSemaphores();
         private:
             std::unique_ptr<device::VulkanInstance> instance;
+
+            // Declared right after instance so it is destroyed just before it.
+            std::unique_ptr<util::VulkanDebugMessenger> debugMessenger;
 
             std::unique_ptr<util::IWindowExtension> windowExtension;
             
@@ -94,15 +89,25 @@ namespace projectv
 
             std::unique_ptr<command::VulkanCommandPool> graphicsCommandPool;
 
-            std::unique_ptr<sync::VulkanFence> graphicsFence;
+            std::unique_ptr<sync::VulkanFence> inFlight;
 
             std::unique_ptr<window::VulkanSwapchain> swapchain;
 
             std::unique_ptr<RendererResources> renderResources;
 
+            std::unique_ptr<util::VulkanValidationLayerManager> vulkanValidationLayerManager;
+
             core::IWindow* window = nullptr;
 
-            engine::ShaderManager* shaderManager = nullptr;
+            std::unique_ptr<command::VulkanCommandBuffer> commandBuffer;
+
+            std::unique_ptr<sync::VulkanSemaphore> imageAvailableSemaphore;
+
+            std::vector<sync::VulkanSemaphore> renderFinishedSemaphoreList;
+
+            uint32_t currentImageIndex = UINT32_MAX;
+
+            bool isFrameRunning = false;
         };
     }
 }

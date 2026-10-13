@@ -20,6 +20,7 @@ message(STATUS "Vulkan libraries: ${Vulkan_LIBRARIES}")
 add_library(projectv_vulkan STATIC  
     include/projectV/vulkan/vulkanRenderer.hpp
     include/projectV/vulkan/vulkanFactory.hpp
+    include/projectV/vulkan/rendererFactory.hpp
     include/projectV/vulkan/vulkanRenderPass.hpp
     include/projectV/vulkan/rendererResources.hpp
 
@@ -46,12 +47,15 @@ add_library(projectv_vulkan STATIC
     include/projectV/vulkan/rendererResources/vulkanGraphicsPipeline.hpp
 
     include/projectV/vulkan/synchronization/vulkanFence.hpp
+    include/projectV/vulkan/synchronization/vulkanSemaphore.hpp
 
     include/projectV/vulkan/types/queueFamilies.hpp
 
     include/projectV/vulkan/util/vulkanCheck.hpp
     include/projectV/vulkan/util/windowExtension.hpp
     include/projectV/vulkan/util/glfwWindowExtension.hpp
+    include/projectV/vulkan/util/vulkanValidationLayerManager.hpp
+    include/projectV/vulkan/util/vulkanDebugMessenger.hpp
 
     include/projectV/vulkan/window/vulkanSurface.hpp
     include/projectV/vulkan/window/vulkanSwapchain.hpp
@@ -59,6 +63,7 @@ add_library(projectv_vulkan STATIC
     include/projectV/vulkan/window/windowSurface.hpp
     include/projectV/vulkan/window/glfwWindowSurface.hpp
 
+    src/rendererFactory.cpp
     src/vulkanRenderer.cpp
     src/vulkanRenderPass.cpp
     src/rendererResources.cpp
@@ -83,8 +88,11 @@ add_library(projectv_vulkan STATIC
     src/rendererResources/vulkanGraphicsPipeline.cpp
 
     src/synchronization/vulkanFence.cpp
+    src/synchronization/vulkanSemaphore.cpp
 
     src/util/glfwWindowExtension.cpp
+    src/util/vulkanValidationLayerManager.cpp
+    src/util/vulkanDebugMessenger.cpp
 
     src/window/vulkanSurface.cpp
     src/window/vulkanSwapchain.cpp
