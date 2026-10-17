@@ -6,17 +6,44 @@ namespace projectv
 {
     namespace vulkan::sync
     {
+        VulkanFence::VulkanFence(VulkanFence &&other) noexcept
+            : device(other.device)
+            , fence(other.fence)
+        {
+            other.device = VK_NULL_HANDLE;
+            other.fence   = VK_NULL_HANDLE;
+        }
+
+        VulkanFence &VulkanFence::operator=(VulkanFence &&other) noexcept
+        {
+            if (this != &other)
+            {
+                destroy();
+
+                device = other.device;
+                fence   = other.fence;
+
+                other.device = VK_NULL_HANDLE;
+                other.fence   = VK_NULL_HANDLE;
+            }
+            return *this;
+        }
+
         VulkanFence::~VulkanFence()
         {
             destroy();
         }
 
-        void VulkanFence::create(VkDevice device)
+        void VulkanFence::create(VkDevice device, bool startSignaled)
         {
+            destroy();
             this->device = device;
 
             VkFenceCreateInfo fenceInfo{};
             fenceInfo.sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO;
+
+            if(startSignaled)
+                fenceInfo.flags |= VK_FENCE_CREATE_SIGNALED_BIT;
 
             vkCheck(vkCreateFence(this->device, &fenceInfo, nullptr, &fence), "VulkanFence::create, Failed to create fence!");
         }
@@ -36,7 +63,7 @@ namespace projectv
 
         void VulkanFence::reset()
         {
-            vkCheck(vkResetFences(device, 1, &fence), "VulkanFence::reset, Failed to rest fence!");
+            vkCheck(vkResetFences(device, 1, &fence), "VulkanFence::reset, Failed to reset fence!");
         }
 
         VkFence VulkanFence::handle() const noexcept

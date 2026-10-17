@@ -2,6 +2,19 @@
 
 #include <vulkan/vulkan.h>
 
+#include <span>
+
+namespace projectv::vulkan
+{
+    class VulkanRenderPass;
+
+    namespace rendererResources
+    {
+        class VulkanFramebuffer;
+        class VulkanGraphicsPipeline;
+    }
+}
+
 namespace projectv::vulkan::command
 {
     class VulkanCommandPool;
@@ -46,6 +59,102 @@ namespace projectv::vulkan::command
          * submission.
          */
         void end();
+
+        /**
+         * @brief Begins a render pass instance with inline subpass contents.
+         *
+         * Must be called while recording (after begin()) and must be paired
+         * with endRenderPass() before end() is called.
+         *
+         * @param renderPass  Render pass to begin.
+         * @param framebuffer Framebuffer whose attachments are rendered into;
+         *                    must be compatible with renderPass.
+         * @param renderArea  Region of the framebuffer affected by the pass,
+         *                    typically {{0, 0}, swapchain extent}.
+         * @param clearValues One clear value per attachment, indexed by
+         *                    attachment number. Only read for attachments
+         *                    using VK_ATTACHMENT_LOAD_OP_CLEAR. Must stay
+         *                    valid for the duration of this call only.
+         */
+        void beginRenderPass(const VulkanRenderPass& renderPass,
+                     const rendererResources::VulkanFramebuffer& framebuffer,
+                     VkRect2D renderArea,
+                     std::span<const VkClearValue> clearValues);
+
+        /**
+         * @brief Ends the current render pass instance.
+         *
+         * Must be called inside a render pass started by beginRenderPass().
+         */
+        void endRenderPass();
+
+        /**
+         * @brief Binds a graphics pipeline for subsequent draw commands.
+         *
+         * The pipeline stays bound until another graphics pipeline is bound
+         * or recording ends.
+         *
+         * @param graphicsPipeline Pipeline to bind; must be compatible with the
+         *                         render pass and subpass currently active.
+         */
+        void bindGraphicsPipeline(const rendererResources::VulkanGraphicsPipeline& graphicsPipeline);
+
+        /**
+         * @brief Records a non-indexed draw using the currently bound pipeline.
+         *
+         * Must be called inside a render pass with a graphics pipeline bound,
+         * and with any dynamic state (viewport, scissor) already set.
+         *
+         * @param vertexCount   Number of vertices to draw.
+         * @param instanceCount Number of instances to draw; 1 for no instancing.
+         * @param firstVertex   Index of the first vertex (gl_VertexIndex offset).
+         * @param firstInstance Index of the first instance (gl_InstanceIndex offset).
+         */
+        void draw(uint32_t vertexCount, uint32_t instanceCount, uint32_t firstVertex, uint32_t firstInstance);
+
+        /**
+         * @brief Sets viewport 0 as dynamic state.
+         *
+         * Only valid for pipelines created with VK_DYNAMIC_STATE_VIEWPORT.
+         *
+         * @param viewport Viewport describing the framebuffer-space mapping.
+         */
+        void setViewport(const VkViewport& viewport);
+
+        /**
+         * @brief Sets viewport 0 as dynamic state from individual components.
+         *
+         * Convenience overload of setViewport(const VkViewport&).
+         *
+         * @param x        Left edge of the viewport in pixels.
+         * @param y        Top edge of the viewport in pixels.
+         * @param width    Viewport width in pixels.
+         * @param height   Viewport height in pixels.
+         * @param minDepth Minimum depth, usually 0.0f.
+         * @param maxDepth Maximum depth, usually 1.0f.
+         */
+        void setViewport(float x, float y, float width, float height,
+                            float minDepth, float maxDepth);
+
+        /**
+         * @brief Sets scissor 0 as dynamic state.
+         *
+         * Fragments outside this rectangle are discarded. Only valid for
+         * pipelines created with VK_DYNAMIC_STATE_SCISSOR.
+         *
+         * @param scissor Scissor rectangle in framebuffer pixels.
+         */
+        void setScissor(const VkRect2D& scissor);
+
+        /**
+         * @brief Sets scissor 0 as dynamic state from an offset and extent.
+         *
+         * Convenience overload of setScissor(const VkRect2D&).
+         *
+         * @param offset Top-left corner of the scissor rectangle in pixels.
+         * @param extent Size of the scissor rectangle in pixels.
+         */
+        void setScissor(VkOffset2D offset, VkExtent2D extent);
 
         /**
          * @brief Returns the underlying Vulkan command buffer handle.
