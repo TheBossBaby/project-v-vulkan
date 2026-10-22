@@ -1,8 +1,10 @@
 #pragma once
 
 #include <vulkan/vulkan.h>
+#include <vulkan/rendererResources/vulkanBuffer.hpp>
 
 #include <span>
+#include <vector>
 
 namespace projectv::vulkan
 {
@@ -113,6 +115,16 @@ namespace projectv::vulkan::command
         void draw(uint32_t vertexCount, uint32_t instanceCount, uint32_t firstVertex, uint32_t firstInstance);
 
         /**
+         * @brief Records an indexed draw using the bound vertex and index buffers.
+         * @param indexCount    Number of indices to draw.
+         * @param instanceCount Number of instances to draw.
+         * @param firstIndex    Index of the first index in the index buffer.
+         * @param vertexOffset  Value added to each index before vertex lookup.
+         * @param firstInstance Instance ID of the first instance.
+         */
+        void drawIndexed(uint32_t indexCount, uint32_t instanceCount, uint32_t firstIndex, int32_t vertexOffset, uint32_t firstInstance);
+
+        /**
          * @brief Sets viewport 0 as dynamic state.
          *
          * Only valid for pipelines created with VK_DYNAMIC_STATE_VIEWPORT.
@@ -156,6 +168,23 @@ namespace projectv::vulkan::command
          */
         void setScissor(VkOffset2D offset, VkExtent2D extent);
 
+        /**
+         * @brief Binds vertex buffers to consecutive binding slots.
+         *
+         * Each buffer is bound at offset 0.
+         *
+         * @param firstBinding Binding slot of the first buffer.
+         * @param buffers      Buffers to bind, in binding order; must not contain nullptr.
+         */
+        void bindVertexBuffers(uint32_t firstBinding, const std::vector<const rendererResources::VulkanBuffer*>& buffers);
+
+        /**
+         * @brief Binds an index buffer for subsequent indexed draws.
+         * @param buffer    Buffer holding the index data.
+         * @param indexType Type of each index (e.g. VK_INDEX_TYPE_UINT32).
+         * @param offSet    Byte offset into @p buffer where indices start.
+         */
+        void bindIndexBuffer(const rendererResources::VulkanBuffer& buffer, VkIndexType indexType, uint64_t offSet = 0);
         /**
          * @brief Returns the underlying Vulkan command buffer handle.
          *

@@ -9,6 +9,8 @@
 #include <vulkan/rendererResources/vulkanGraphicsPipeline.hpp>
 
 #include "vulkanCommandBuffer.hpp"
+
+#include <vector>
 namespace projectv
 {
     namespace vulkan::command
@@ -68,6 +70,11 @@ namespace projectv
             vkCmdDraw(commandBuffer, vertexCount, instanceCount, firstVertex, firstInstance);
         }
 
+        void VulkanCommandBuffer::drawIndexed(uint32_t indexCount, uint32_t instanceCount, uint32_t firstIndex, int32_t vertexOffset, uint32_t firstInstance)
+        {
+            vkCmdDrawIndexed(commandBuffer, indexCount, instanceCount, firstIndex, vertexOffset, firstInstance);
+        }
+
         void VulkanCommandBuffer::setViewport(const VkViewport &viewport)
         {
             vkCmdSetViewport(commandBuffer, 0, 1, &viewport);
@@ -98,6 +105,29 @@ namespace projectv
             scissor.extent = extent;
 
             setScissor(scissor);
+        }
+
+        void VulkanCommandBuffer::bindVertexBuffers(uint32_t firstBinding, const std::vector<const rendererResources::VulkanBuffer*>& buffers)
+        {
+            const auto bufferCount = buffers.size();
+            std::vector<VkBuffer> bufferList;
+            std::vector<VkDeviceSize> bufferOffSet;
+
+            bufferList.reserve(bufferCount);
+            bufferOffSet.reserve(bufferCount);
+
+            for (size_t i = 0; i < bufferCount; i++)
+            {
+                bufferList.push_back(buffers[i]->handle());
+                bufferOffSet.push_back(0);
+            }
+            
+            vkCmdBindVertexBuffers(commandBuffer, firstBinding, bufferCount, bufferList.data(), bufferOffSet.data());
+        }
+
+        void VulkanCommandBuffer::bindIndexBuffer(const rendererResources::VulkanBuffer &buffer, VkIndexType indexType, uint64_t offSet)
+        {
+            vkCmdBindIndexBuffer(commandBuffer, buffer.handle(), offSet, indexType);
         }
 
         VkCommandBuffer VulkanCommandBuffer::handle() const noexcept
