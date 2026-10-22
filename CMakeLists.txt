@@ -43,6 +43,7 @@ add_library(projectv_vulkan STATIC
     include/projectV/vulkan/device/vulkanPhysicalDevice.hpp
     include/projectV/vulkan/device/vulkanQueue.hpp
 
+    include/projectV/vulkan/rendererResources/meshEntry.hpp
     include/projectV/vulkan/rendererResources/vulkanBuffer.hpp
     include/projectV/vulkan/rendererResources/vulkanFramebuffer.hpp
     include/projectV/vulkan/rendererResources/vulkanShaderModule.hpp

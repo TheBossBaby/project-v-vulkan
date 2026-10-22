@@ -27,6 +27,24 @@ namespace projectv
             return m_framebuffers;
         }
 
+        core::gpu::GpuMeshHandle RendererResources::addGpuMesh(MeshEntry buffer)
+        {
+            core::gpu::GpuMeshHandle handle;
+            handle.index = static_cast<std::uint32_t>(m_meshList.size());
+
+            m_meshList.push_back(std::move(buffer));
+
+            return handle;
+        }
+
+        const MeshEntry *RendererResources::gpuMesh(core::gpu::GpuMeshHandle gpuMeshHandle) const
+        {
+            if (!gpuMeshHandle.isValid() || gpuMeshHandle.index >= m_meshList.size())
+                return nullptr;
+            
+            return &m_meshList[gpuMeshHandle.index];
+        }
+
         core::GraphicsPipelineHandle RendererResources::addGraphicsPipeline(
             rendererResources::VulkanPipelineLayout layout,
             rendererResources::VulkanGraphicsPipeline pipeline)

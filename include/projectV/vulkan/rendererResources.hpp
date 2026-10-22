@@ -1,8 +1,10 @@
 #pragma once
 
 #include <projectV/core/graphicsPipelineHandle.hpp>
+#include <projectV/core/gpu/gpuMeshHandle.hpp>
 
 #include <vulkan/vulkanRenderPass.hpp>
+#include <vulkan/rendererResources/meshEntry.hpp>
 #include <vulkan/rendererResources/vulkanFramebuffer.hpp>
 #include <vulkan/rendererResources/vulkanPipelineLayout.hpp>
 #include <vulkan/rendererResources/vulkanGraphicsPipeline.hpp>
@@ -38,6 +40,21 @@ namespace projectv
             const std::vector<rendererResources::VulkanFramebuffer>& framebuffers() const;
 
             /**
+             * @brief Takes ownership of a mesh's GPU buffers and registers it.
+             * @param buffer Mesh entry to store; moved into the cache.
+             * @return Handle identifying the mesh for later lookup via gpuMesh().
+             */
+            core::gpu::GpuMeshHandle addGpuMesh(MeshEntry buffer);
+
+            /**
+             * @brief Looks up a previously registered mesh.
+             * @param gpuMeshHandle Handle returned by addGpuMesh().
+             * @return Pointer to the mesh entry, or nullptr if the handle is
+             *         invalid or out of range. Invalidated by later addGpuMesh() calls.
+             */
+            const MeshEntry* gpuMesh(core::gpu::GpuMeshHandle gpuMeshHandle) const;             
+
+            /**
              * @brief Registers a newly created graphics pipeline.
              *
              * @param layout   Pipeline layout the pipeline was built against.
@@ -61,6 +78,9 @@ namespace projectv
             std::vector<rendererResources::VulkanFramebuffer> m_framebuffers;
 
             std::vector<GraphicsPipelineEntry> m_graphicsPipelines;
+
+            /// Registered meshes, indexed by GpuMeshHandle::index.
+            std::vector<MeshEntry> m_meshList;
         };
     }
 }
