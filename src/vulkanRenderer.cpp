@@ -1,12 +1,14 @@
 #include <projectV/core/transform.hpp>
 #include <projectV/core/shader.hpp>
 #include <projectV/core/shaderHandle.hpp>
+#include <projectV/core/mesh.hpp>
 #include <projectV/core/meshHandle.hpp>
 
 #include <projectV/engine/logging/log.hpp>
 
 #include <vulkan/vulkan.h>
 
+#include <vulkan/builder/vulkanBufferBuilder.hpp>
 #include <vulkan/builder/VulkanRenderPassBuilder.hpp>
 #include <vulkan/builder/vulkanFramebufferBuilder.hpp>
 #include <vulkan/builder/vulkanShaderModuleBuilder.hpp>
@@ -170,6 +172,37 @@ namespace projectv
             
             frame.commandBuffer.draw(3, 1, 0, 0);
         }
+    }
+
+    core::gpu::GpuMeshHandle vulkan::vulkanRenderer::uploadMesh(const struct core::Mesh& mesh)
+    {
+        auto vertexBufferSize = sizeof(mesh.vertices[0]) * mesh.vertices.size();
+        auto indexBufferSize  = sizeof(mesh.indices[0]) * mesh.indices.size();
+
+        rendererResources::VulkanBuffer vertexBuffer = builder::VulkanBufferBuilder()
+        .setDeviceSize(vertexBufferSize)
+        .setSharingMode(VK_SHARING_MODE_EXCLUSIVE)
+        .setUsageFlags(VK_BUFFER_USAGE_VERTEX_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT)
+        .setMemoryProperties(VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT)
+        .build(logicalDevice->handle(), physicalDevice->handle());
+
+        rendererResources::VulkanBuffer indexBuffer = builder::VulkanBufferBuilder()
+        .setDeviceSize(indexBufferSize)
+        .setSharingMode(VK_SHARING_MODE_EXCLUSIVE)
+        .setUsageFlags(VK_BUFFER_USAGE_INDEX_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT)
+        .setMemoryProperties(VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT)
+        .build(logicalDevice->handle(), physicalDevice->handle());
+
+        vertexBuffer.write(mesh.vertices.data(), vertexBufferSize);
+        indexBuffer.write(mesh.indices.data(), indexBufferSize);
+
+        return renderResources->addGpuMesh(
+            {
+                std::move(vertexBuffer),
+                std::move(indexBuffer),
+                static_cast<std::uint32_t>(mesh.indices.size())
+            }
+        );
     }
 
     core::GraphicsPipelineHandle vulkan::vulkanRenderer::createGraphicsPipeline(

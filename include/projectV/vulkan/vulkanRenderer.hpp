@@ -59,6 +59,16 @@ namespace projectv
 
             void draw(const std::vector<core::Renderable>& items) override;
 
+            /**
+             * @brief Uploads a CPU mesh into host-visible vertex and index
+             *        buffers and registers it with the renderer resources.
+             * @param mesh Mesh whose vertices and indices are copied to the GPU.
+             * @return Handle used to reference the uploaded mesh when drawing.
+             *
+             * @throws std::runtime_error if buffer creation or memory allocation fails.
+             */
+            core::gpu::GpuMeshHandle uploadMesh(const struct core::Mesh& mesh) override;
+
             core::GraphicsPipelineHandle createGraphicsPipeline(const core::GraphicsPipelineDescription& description) override;
 
             void endFrame() override;
