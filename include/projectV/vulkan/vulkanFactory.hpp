@@ -65,11 +65,6 @@ namespace projectv
                     return std::make_unique<command::VulkanCommandPool>();
                 }
 
-                static std::unique_ptr<sync::VulkanFence> createFence()
-                {
-                    return std::make_unique<sync::VulkanFence>();
-                }
-
                 static std::unique_ptr<window::VulkanSwapchain> createSwapchain()
                 {
                     return std::make_unique<window::VulkanSwapchain>();
@@ -83,11 +78,6 @@ namespace projectv
                 static std::unique_ptr<util::VulkanDebugMessenger> createDebugMessenger()
                 {
                     return std::make_unique<util::VulkanDebugMessenger>();
-                }
-                
-                static std::unique_ptr<sync::VulkanSemaphore> createVulkanSemaphore()
-                {
-                    return std::make_unique<sync::VulkanSemaphore>();
                 }
         };
     }
