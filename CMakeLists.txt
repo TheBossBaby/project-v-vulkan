@@ -25,6 +25,7 @@ add_library(projectv_vulkan STATIC
     include/projectV/vulkan/rendererResources.hpp
     include/projectV/vulkan/frameData.hpp
 
+    include/projectV/vulkan/builder/vulkanBufferBuilder.hpp
     include/projectV/vulkan/builder/vulkanRenderPassBuilder.hpp
     include/projectV/vulkan/builder/vulkanFramebufferBuilder.hpp
     include/projectV/vulkan/builder/vulkanShaderModuleBuilder.hpp
@@ -42,6 +43,8 @@ add_library(projectv_vulkan STATIC
     include/projectV/vulkan/device/vulkanPhysicalDevice.hpp
     include/projectV/vulkan/device/vulkanQueue.hpp
 
+    include/projectV/vulkan/rendererResources/meshEntry.hpp
+    include/projectV/vulkan/rendererResources/vulkanBuffer.hpp
     include/projectV/vulkan/rendererResources/vulkanFramebuffer.hpp
     include/projectV/vulkan/rendererResources/vulkanShaderModule.hpp
     include/projectV/vulkan/rendererResources/vulkanPipelineLayout.hpp
@@ -69,6 +72,7 @@ add_library(projectv_vulkan STATIC
     src/vulkanRenderPass.cpp
     src/rendererResources.cpp
 
+    src/builder/vulkanBufferBuilder.cpp
     src/builder/vulkanRenderPassBuilder.cpp
     src/builder/vulkanFramebufferBuilder.cpp
     src/builder/vulkanShaderModuleBuilder.cpp
@@ -83,6 +87,7 @@ add_library(projectv_vulkan STATIC
     src/device/vulkanPhysicalDevice.cpp
     src/device/vulkanQueue.cpp
 
+    src/rendererResources/vulkanBuffer.cpp
     src/rendererResources/vulkanFramebuffer.cpp
     src/rendererResources/vulkanShaderModule.cpp
     src/rendererResources/vulkanPipelineLayout.cpp

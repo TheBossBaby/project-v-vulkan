@@ -1,12 +1,14 @@
 #include <projectV/core/transform.hpp>
 #include <projectV/core/shader.hpp>
 #include <projectV/core/shaderHandle.hpp>
+#include <projectV/core/mesh.hpp>
 #include <projectV/core/meshHandle.hpp>
 
 #include <projectV/engine/logging/log.hpp>
 
 #include <vulkan/vulkan.h>
 
+#include <vulkan/builder/vulkanBufferBuilder.hpp>
 #include <vulkan/builder/VulkanRenderPassBuilder.hpp>
 #include <vulkan/builder/vulkanFramebufferBuilder.hpp>
 #include <vulkan/builder/vulkanShaderModuleBuilder.hpp>
@@ -34,6 +36,7 @@
 #include <vulkan/window/vulkanSurface.hpp>
 #include <vulkan/window/vulkanSwapchain.hpp>
 
+#include <array>
 #include <utility>
 
 namespace projectv
@@ -162,14 +165,59 @@ namespace projectv
             auto graphicsPipeline = renderResources->graphicsPipeline(items[i].graphicsPipelineHandle);
             if (!graphicsPipeline) continue;
 
+            const projectv::vulkan::MeshEntry *meshEntry = renderResources->gpuMesh(items[i].gpuMesh);
+            if (!meshEntry) continue;
+
             if(previousGraphicsPipeline != graphicsPipeline->pipeline.handle())
             {
                 previousGraphicsPipeline = graphicsPipeline->pipeline.handle();
                 frame.commandBuffer.bindGraphicsPipeline(graphicsPipeline->pipeline);
             }
             
-            frame.commandBuffer.draw(3, 1, 0, 0);
+            frame.commandBuffer.bindVertexBuffers(0, { &meshEntry->vertexBuffer });
+            frame.commandBuffer.bindIndexBuffer(meshEntry->indexBuffer, VK_INDEX_TYPE_UINT32);
+
+            auto vertexCount = meshEntry->vertexBuffer.getDeviceSize() / sizeof(core::Vertex);
+
+            if(meshEntry->indexBuffer.handle() != VK_NULL_HANDLE)
+            {
+                frame.commandBuffer.drawIndexed(meshEntry->indexCount, 1, 0, 0, 0);
+                continue;
+            }
+
+            frame.commandBuffer.draw(vertexCount, 1, 0, 0);
         }
+    }
+
+    core::gpu::GpuMeshHandle vulkan::vulkanRenderer::uploadMesh(const struct core::Mesh& mesh)
+    {
+        auto vertexBufferSize = sizeof(mesh.vertices[0]) * mesh.vertices.size();
+        auto indexBufferSize  = sizeof(mesh.indices[0]) * mesh.indices.size();
+
+        rendererResources::VulkanBuffer vertexBuffer = builder::VulkanBufferBuilder()
+        .setDeviceSize(vertexBufferSize)
+        .setSharingMode(VK_SHARING_MODE_EXCLUSIVE)
+        .setUsageFlags(VK_BUFFER_USAGE_VERTEX_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT)
+        .setMemoryProperties(VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT)
+        .build(logicalDevice->handle(), physicalDevice->handle());
+
+        rendererResources::VulkanBuffer indexBuffer = builder::VulkanBufferBuilder()
+        .setDeviceSize(indexBufferSize)
+        .setSharingMode(VK_SHARING_MODE_EXCLUSIVE)
+        .setUsageFlags(VK_BUFFER_USAGE_INDEX_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT)
+        .setMemoryProperties(VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT)
+        .build(logicalDevice->handle(), physicalDevice->handle());
+
+        vertexBuffer.write(mesh.vertices.data(), vertexBufferSize);
+        indexBuffer.write(mesh.indices.data(), indexBufferSize);
+
+        return renderResources->addGpuMesh(
+            {
+                std::move(vertexBuffer),
+                std::move(indexBuffer),
+                static_cast<std::uint32_t>(mesh.indices.size())
+            }
+        );
     }
 
     core::GraphicsPipelineHandle vulkan::vulkanRenderer::createGraphicsPipeline(
@@ -196,11 +244,22 @@ namespace projectv
         rendererResources::VulkanPipelineLayout layout =
             builder::VulkanPipelineLayoutBuilder().build(logicalDevice->handle());
 
+        const VkVertexInputBindingDescription bindingDescription {0, sizeof(core::Vertex), VK_VERTEX_INPUT_RATE_VERTEX};
+
+        const std::array<VkVertexInputAttributeDescription, 4>  attributeDescription 
+        {{
+            { 0, 0, VK_FORMAT_R32G32B32_SFLOAT,    offsetof(core::Vertex, position) },
+            { 1, 0, VK_FORMAT_R32G32B32_SFLOAT,    offsetof(core::Vertex, normal) },
+            { 2, 0, VK_FORMAT_R32G32B32A32_SFLOAT,    offsetof(core::Vertex, color) },
+            { 3, 0, VK_FORMAT_R32G32_SFLOAT,    offsetof(core::Vertex, uv) },
+        }};
+
         builder::VulkanGraphicsPipelineBuilder pipelineBuilder;
         pipelineBuilder
             .addShaderStage(vertexModule.handle(), VK_SHADER_STAGE_VERTEX_BIT)
             .addShaderStage(fragmentModule.handle(), VK_SHADER_STAGE_FRAGMENT_BIT)
             .setLayout(layout.handle())
+            .setVertexInputState(std::span(&bindingDescription, 1), attributeDescription)
             .setRenderPass(renderResources->renderPass().handle());
 
         rendererResources::VulkanGraphicsPipeline pipeline = pipelineBuilder.build(logicalDevice->handle());
