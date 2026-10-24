@@ -14,6 +14,7 @@ namespace projectv::vulkan
     {
         class VulkanFramebuffer;
         class VulkanGraphicsPipeline;
+        class VulkanPipelineLayout;
     }
 }
 
@@ -185,6 +186,9 @@ namespace projectv::vulkan::command
          * @param offSet    Byte offset into @p buffer where indices start.
          */
         void bindIndexBuffer(const rendererResources::VulkanBuffer& buffer, VkIndexType indexType, uint64_t offSet = 0);
+
+        void pushConstants(const rendererResources::VulkanPipelineLayout &pipelineLayout, VkShaderStageFlags stageFlags, uint32_t offSet, uint32_t size, const void *pValues);
+
         /**
          * @brief Returns the underlying Vulkan command buffer handle.
          *

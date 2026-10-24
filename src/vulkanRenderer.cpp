@@ -105,6 +105,8 @@ namespace projectv
 
     void vulkan::vulkanRenderer::beginFrame(const core::RenderView& renderView)
     {
+        viewProj = renderView.viewProj;
+
         VkClearValue clearValue{};
         clearValue.color.float32[0] = renderView.clearColor.x;
         clearValue.color.float32[1] = renderView.clearColor.y;
@@ -179,6 +181,12 @@ namespace projectv
 
             auto vertexCount = meshEntry->vertexBuffer.getDeviceSize() / sizeof(core::Vertex);
 
+            core::math::Matrix4 mvp = viewProj * items[i].modelMatrix;
+            frame.commandBuffer.pushConstants(graphicsPipeline->layout, 
+                VK_SHADER_STAGE_VERTEX_BIT, 
+                0, sizeof(core::math::Matrix4), 
+                &mvp);
+
             if(meshEntry->indexBuffer.handle() != VK_NULL_HANDLE)
             {
                 frame.commandBuffer.drawIndexed(meshEntry->indexCount, 1, 0, 0, 0);
@@ -242,7 +250,9 @@ namespace projectv
             builder::VulkanShaderModuleBuilder().setCode(description.fragmentShaderCode).build(logicalDevice->handle());
 
         rendererResources::VulkanPipelineLayout layout =
-            builder::VulkanPipelineLayoutBuilder().build(logicalDevice->handle());
+            builder::VulkanPipelineLayoutBuilder()
+            .addPushConstantRange(VK_SHADER_STAGE_VERTEX_BIT, 0, sizeof(core::math::Matrix4)) // Make room for modelViewProjection Matrix in push constant
+            .build(logicalDevice->handle());
 
         const VkVertexInputBindingDescription bindingDescription {0, sizeof(core::Vertex), VK_VERTEX_INPUT_RATE_VERTEX};
 

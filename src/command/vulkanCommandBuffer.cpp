@@ -7,6 +7,7 @@
 
 #include <vulkan/rendererResources/vulkanFramebuffer.hpp>
 #include <vulkan/rendererResources/vulkanGraphicsPipeline.hpp>
+#include <vulkan/rendererResources/vulkanPipelineLayout.hpp>
 
 #include "vulkanCommandBuffer.hpp"
 
@@ -128,6 +129,11 @@ namespace projectv
         void VulkanCommandBuffer::bindIndexBuffer(const rendererResources::VulkanBuffer &buffer, VkIndexType indexType, uint64_t offSet)
         {
             vkCmdBindIndexBuffer(commandBuffer, buffer.handle(), offSet, indexType);
+        }
+
+        void VulkanCommandBuffer::pushConstants(const rendererResources::VulkanPipelineLayout &pipelineLayout, VkShaderStageFlags stageFlags, uint32_t offSet, uint32_t size, const void *pValues)
+        {
+            vkCmdPushConstants(commandBuffer, pipelineLayout.handle(), stageFlags, offSet, size, pValues);
         }
 
         VkCommandBuffer VulkanCommandBuffer::handle() const noexcept

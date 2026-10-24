@@ -118,6 +118,8 @@ namespace projectv
             bool isFrameRunning = false;
 
             std::vector<FrameData> frames;
+
+            core::math::Matrix4 viewProj;
         };
     }
 }
