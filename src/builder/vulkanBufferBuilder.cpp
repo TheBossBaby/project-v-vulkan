@@ -2,6 +2,7 @@
 
 #include <vulkan/builder/vulkanBufferBuilder.hpp>
 #include <vulkan/util/vulkanCheck.hpp>
+#include <vulkan/util/vulkanMemory.hpp>
 
 namespace projectv
 {
@@ -82,30 +83,12 @@ namespace projectv
                 VkMemoryAllocateInfo allocInfo{};
                 allocInfo.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
                 allocInfo.allocationSize = memRequirements.size;
-                allocInfo.memoryTypeIndex = findMemoryType(physicalDevice, memRequirements.memoryTypeBits);
+                allocInfo.memoryTypeIndex = util::findMemoryType(physicalDevice, memRequirements.memoryTypeBits, m_properties);
 
                 vkCheck(
                     vkAllocateMemory(device, &allocInfo, nullptr, &outDeviceMemory),
                     "VulkanBuffer::VulkanBuffer, Failed to allocate VkBufferMemory"
                 );
-            }
-
-            uint32_t VulkanBufferBuilder::findMemoryType(VkPhysicalDevice physicalDevice, uint32_t typeFilter)
-            {
-                VkPhysicalDeviceMemoryProperties memProperties;
-                vkGetPhysicalDeviceMemoryProperties(physicalDevice, &memProperties);
-
-                for (uint32_t i = 0; i < memProperties.memoryTypeCount; i++) 
-                {
-                    if ((typeFilter & (1u << i)) && 
-                        (memProperties.memoryTypes[i].propertyFlags & m_properties) == m_properties) 
-                    {
-                        return i;
-                    }
-                }
-
-                engine::LogError("VulkanBuffer::findMemoryType, failed to find suitable memory type!");
-                throw std::runtime_error("VulkanBuffer::findMemoryType, failed to find suitable memory type!");
             }
         }
     }

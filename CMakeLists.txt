@@ -60,6 +60,7 @@ add_library(projectv_vulkan STATIC
     include/projectV/vulkan/util/glfwWindowExtension.hpp
     include/projectV/vulkan/util/vulkanValidationLayerManager.hpp
     include/projectV/vulkan/util/vulkanDebugMessenger.hpp
+    include/projectV/vulkan/util/vulkanMemory.hpp
 
     include/projectV/vulkan/window/vulkanSurface.hpp
     include/projectV/vulkan/window/vulkanSwapchain.hpp
@@ -99,6 +100,7 @@ add_library(projectv_vulkan STATIC
     src/util/glfwWindowExtension.cpp
     src/util/vulkanValidationLayerManager.cpp
     src/util/vulkanDebugMessenger.cpp
+    src/util/vulkanMemory.cpp
 
     src/window/vulkanSurface.cpp
     src/window/vulkanSwapchain.cpp

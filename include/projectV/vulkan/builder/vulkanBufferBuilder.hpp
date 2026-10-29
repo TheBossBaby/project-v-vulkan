@@ -86,17 +86,6 @@ namespace projectv
                  */
                 void allocateBufferMemory(VkDevice device, VkPhysicalDevice physicalDevice, VkBuffer buffer, VkDeviceMemory& outDeviceMemory);
 
-                /**
-                 * @brief Finds a memory type index allowed by @p typeFilter that
-                 *        has all of the configured memory properties.
-                 * @param physicalDevice Physical device to query.
-                 * @param typeFilter     Bitmask of acceptable memory type indices,
-                 *                       from VkMemoryRequirements::memoryTypeBits.
-                 * @return Index of the first matching memory type.
-                 *
-                 * @throws std::runtime_error if no suitable memory type exists.
-                 */
-                uint32_t findMemoryType(VkPhysicalDevice physicalDevice, uint32_t typeFilter);
             private:
                 /// Buffer creation flags.
                 VkBufferCreateFlags    m_createFlags = 0;
