@@ -35,6 +35,31 @@ namespace projectv
             void select(VkInstance instance, VkSurfaceKHR surface, const std::vector<const char*>& requiredDeviceExtensionList);
 
             /**
+             * @brief Returns the first candidate format that the selected GPU
+             *        supports with the given tiling and features.
+             *
+             * Candidates are checked in order, so list them from most to least
+             * preferred. A typical use is picking a depth format, e.g.
+             * { VK_FORMAT_D32_SFLOAT, VK_FORMAT_D32_SFLOAT_S8_UINT,
+             * VK_FORMAT_D24_UNORM_S8_UINT } with
+             * VK_FORMAT_FEATURE_DEPTH_STENCIL_ATTACHMENT_BIT.
+             *
+             * Only VK_IMAGE_TILING_LINEAR and VK_IMAGE_TILING_OPTIMAL are
+             * checked; any other tiling never matches.
+             *
+             * @param candidates Formats to test, in order of preference.
+             * @param tiling Image tiling the format will be used with.
+             * @param features Format features that must all be supported for
+             *                 @p tiling.
+             * @return The first format in @p candidates that supports every bit
+             *         in @p features.
+             * @throws std::runtime_error If no physical device is selected yet,
+             *         i.e. select() has not been called.
+             * @throws std::runtime_error If no candidate is supported.
+             */
+            VkFormat findSupportedFormat( const std::vector<VkFormat>& candidates, VkImageTiling tiling, VkFormatFeatureFlags features);
+
+            /**
             * @brief 
             * 
             * @return 
