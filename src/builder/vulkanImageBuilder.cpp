@@ -98,6 +98,18 @@ namespace projectv
                     throw std::runtime_error("VulkanImageBuilder::build, extent must be non-zero");
                 }
 
+                if (m_mipLevels == 0)
+                {
+                    engine::LogError("VulkanImageBuilder::build, mip levels are not set");
+                    throw std::runtime_error("VulkanImageBuilder::build, mip levels are not set");
+                }
+
+                if (m_arrayLayers == 0)
+                {
+                    engine::LogError("VulkanImageBuilder::build, array layers are not set");
+                    throw std::runtime_error("VulkanImageBuilder::build, array layers are not set");
+                }
+
                 if (m_usageFlags == 0)
                 {
                     engine::LogError("VulkanImageBuilder::build, usage flags are not set");

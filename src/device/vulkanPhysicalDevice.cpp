@@ -52,7 +52,7 @@ namespace projectv
             
         }
 
-        VkFormat VulkanPhysicalDevice::findSupportedFormat(const std::vector<VkFormat> &candidates, VkImageTiling tiling, VkFormatFeatureFlags features)
+        VkFormat VulkanPhysicalDevice::findSupportedFormat(const std::vector<VkFormat> &candidates, VkImageTiling tiling, VkFormatFeatureFlags features) const
         {
             if (physicalDevice == VK_NULL_HANDLE) throw std::runtime_error("VulkanPhysicalDevice::findSupportedFormat, failed to find a suitable GPU!");
 

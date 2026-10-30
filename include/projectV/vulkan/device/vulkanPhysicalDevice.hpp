@@ -57,7 +57,7 @@ namespace projectv
              *         i.e. select() has not been called.
              * @throws std::runtime_error If no candidate is supported.
              */
-            VkFormat findSupportedFormat( const std::vector<VkFormat>& candidates, VkImageTiling tiling, VkFormatFeatureFlags features);
+            VkFormat findSupportedFormat( const std::vector<VkFormat>& candidates, VkImageTiling tiling, VkFormatFeatureFlags features) const;
 
             /**
             * @brief 

@@ -17,7 +17,6 @@ namespace projectv
          *
          * @throws std::runtime_error if no suitable memory type exists.
         */
-
         uint32_t findMemoryType(VkPhysicalDevice physicalDevice, uint32_t typeFilter, VkMemoryPropertyFlags properties);
     }
 }

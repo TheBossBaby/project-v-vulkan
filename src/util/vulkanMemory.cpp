@@ -21,8 +21,8 @@ namespace projectv
                 }
             }
 
-            projectv::engine::LogError("VulkanBuffer::findMemoryType, failed to find suitable memory type!");
-            throw std::runtime_error("VulkanBuffer::findMemoryType, failed to find suitable memory type!");
+            projectv::engine::LogError("projectv::vulkan::util::findMemoryType, failed to find suitable memory type!");
+            throw std::runtime_error("projectv::vulkan::util::findMemoryType, failed to find suitable memory type!");
         }
     }
 }
