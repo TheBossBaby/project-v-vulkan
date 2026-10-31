@@ -63,6 +63,7 @@ add_library(projectv_vulkan STATIC
     include/projectV/vulkan/util/vulkanValidationLayerManager.hpp
     include/projectV/vulkan/util/vulkanDebugMessenger.hpp
     include/projectV/vulkan/util/vulkanMemory.hpp
+    include/projectV/vulkan/util/vulkanFormat.hpp
 
     include/projectV/vulkan/window/vulkanSurface.hpp
     include/projectV/vulkan/window/vulkanSwapchain.hpp

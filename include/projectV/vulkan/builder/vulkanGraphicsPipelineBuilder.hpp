@@ -171,6 +171,40 @@ namespace projectv
             VulkanGraphicsPipelineBuilder& setFlags(VkPipelineCreateFlags flags);
 
             /**
+             * @brief Enables or disables the depth test.
+             *
+             * Disabling the test also disables depth writes, regardless of
+             * setDepthWrite().
+             *
+             * @param state VK_TRUE to compare fragments against the depth
+             *              attachment (default: VK_TRUE).
+             * @return Reference to this builder, for chaining.
+             */
+            VulkanGraphicsPipelineBuilder& setDepthTest(VkBool32 state);
+
+            /**
+             * @brief Sets whether fragments that pass the depth test update
+             *        the depth attachment.
+             *
+             * Only has an effect while the depth test is enabled. Disable it
+             * for geometry that should be hidden by other surfaces without
+             * hiding anything itself, such as transparent surfaces.
+             *
+             * @param state VK_TRUE to write depth values (default: VK_TRUE).
+             * @return Reference to this builder, for chaining.
+             */
+            VulkanGraphicsPipelineBuilder& setDepthWrite(VkBool32 state);
+
+            /**
+             * @brief Sets how a fragment's depth is compared with the stored depth.
+             * @param inCompareOp Comparison a fragment must pass to be kept
+             *        (default: VK_COMPARE_OP_LESS, which keeps the nearest
+             *        fragment when the attachment is cleared to 1.0).
+             * @return Reference to this builder, for chaining.
+             */
+            VulkanGraphicsPipelineBuilder& setDepthCompareOperation(VkCompareOp inCompareOp);
+
+            /**
              * @brief Assembles all accumulated state into a
              *        VkGraphicsPipelineCreateInfo and creates the pipeline.
              *
@@ -226,6 +260,9 @@ namespace projectv
             /// Builds the dynamic state sub-struct from m_dynamicStates.
             VkPipelineDynamicStateCreateInfo buildDynamicStateInfo() const;
 
+            /// Builds the depth-stencil state sub-struct from the depth and stencil members.
+            VkPipelineDepthStencilStateCreateInfo buildDepthStencilStateInfo() const;
+
         private:
             /// Accumulated shader stages.
             std::vector<VkPipelineShaderStageCreateInfo> m_shaderStages;
@@ -265,6 +302,19 @@ namespace projectv
             /// Render pass and subpass index to build against.
             VkRenderPass m_renderPass = VK_NULL_HANDLE;
             uint32_t     m_subpass    = 0;
+
+            /// Depth test, depth write and depth bounds state.
+            VkBool32     m_depthTestEnable       = VK_TRUE;
+            VkBool32     m_depthWriteEnable      = VK_TRUE;
+            VkCompareOp  m_depthCompareOp        = VK_COMPARE_OP_LESS;
+            VkBool32     m_depthBoundsTestEnable = VK_FALSE;
+            float        m_minDepthBounds        = 0.0f;
+            float        m_maxDepthBounds        = 1.0f;
+
+            /// Stencil test state.
+            VkBool32           m_stencilTestEnable = VK_FALSE;
+            VkStencilOpState   m_stencilFront      = {};
+            VkStencilOpState   m_stencilBack       = {};
 
             /// Additional pipeline creation flags.
             VkPipelineCreateFlags m_flags = 0;

@@ -14,6 +14,7 @@
 #include <vulkan/builder/vulkanShaderModuleBuilder.hpp>
 #include <vulkan/builder/vulkanPipelineLayoutBuilder.hpp>
 #include <vulkan/builder/vulkanGraphicsPipelineBuilder.hpp>
+#include <vulkan/builder/vulkanImageBuilder.hpp>
 
 #include <vulkan/config/vulkanConfig.hpp>
 #include <vulkan/vulkanFactory.hpp>
@@ -32,6 +33,7 @@
 #include <vulkan/util/vulkanCheck.hpp>
 #include <vulkan/util/vulkanValidationLayerManager.hpp>
 #include <vulkan/util/vulkanDebugMessenger.hpp>
+#include <vulkan/util/vulkanFormat.hpp>
 
 #include <vulkan/window/vulkanSurface.hpp>
 #include <vulkan/window/vulkanSwapchain.hpp>
@@ -88,6 +90,7 @@ namespace projectv
         swapchain->create(*physicalDevice.get(), logicalDevice->handle(), windowSurface->handle(), window->getWidth(), window->getHeight());
         
         createRenderFinishedSemaphores();
+        createDepthBuffer();
         createSwapchainRenderPass();
         createSwapchainFramebuffers();
 
@@ -107,11 +110,13 @@ namespace projectv
     {
         viewProj = renderView.viewProj;
 
-        VkClearValue clearValue{};
-        clearValue.color.float32[0] = renderView.clearColor.x;
-        clearValue.color.float32[1] = renderView.clearColor.y;
-        clearValue.color.float32[2] = renderView.clearColor.z;
-        clearValue.color.float32[3] = renderView.clearColor.w;
+        std::array<VkClearValue, 2> clearValues{};
+        clearValues[0].color.float32[0] = renderView.clearColor.x;
+        clearValues[0].color.float32[1] = renderView.clearColor.y;
+        clearValues[0].color.float32[2] = renderView.clearColor.z;
+        clearValues[0].color.float32[3] = renderView.clearColor.w;
+
+        clearValues[1].depthStencil = {1.0f, 0};
 
         FrameData& frame = frames[currentFrame];
 
@@ -134,7 +139,7 @@ namespace projectv
             renderResources->renderPass(), 
             renderResources->framebuffers().at(currentImageIndex), 
             {{0, 0}, swapchain->extent()},
-            std::span(&clearValue, 1));
+            std::span(clearValues));
         
         frame.commandBuffer.setViewport(
             0.0f,
@@ -315,16 +320,63 @@ namespace projectv
         vulkan::builder::VulkanRenderPassBuilder builder;
 
         uint32_t colorIdx = builder.addColorAttachment(swapchain->format().format);
+        uint32_t depthIdx = builder.addDepthAttachment(renderResources->getDepthImage().format()); 
 
         uint32_t subpass = builder.beginSubpass();
         builder.addColorRef(subpass, colorIdx);
+        builder.setDepthRef(subpass, depthIdx, VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL);
 
         builder.addDependency(
-            VK_SUBPASS_EXTERNAL, subpass,
-            VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT, VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT,
-            0, VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT | VK_ACCESS_COLOR_ATTACHMENT_READ_BIT);
+            VK_SUBPASS_EXTERNAL, 
+            subpass,
+            VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT | VK_PIPELINE_STAGE_LATE_FRAGMENT_TESTS_BIT, 
+            VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT | VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT,
+            VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT, 
+            VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT | VK_ACCESS_COLOR_ATTACHMENT_READ_BIT | VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT
+        );
 
         renderResources->renderPass() = builder.build(logicalDevice->handle());
+    }
+
+    void vulkan::vulkanRenderer::createDepthBuffer()
+    {
+        vulkan::builder::VulkanImageBuilder builder;
+        auto imageFormat = physicalDevice->findSupportedFormat(
+                {VK_FORMAT_D32_SFLOAT, VK_FORMAT_D32_SFLOAT_S8_UINT, VK_FORMAT_D24_UNORM_S8_UINT},
+                VK_IMAGE_TILING_OPTIMAL,
+                VK_FORMAT_FEATURE_DEPTH_STENCIL_ATTACHMENT_BIT);
+
+        builder.setExtent( swapchain->extent().width, swapchain->extent().height )
+                .setFormat( imageFormat )
+                .setTiling(VK_IMAGE_TILING_OPTIMAL)
+                .setUsageFlags(VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT);
+
+        auto depthImage = builder.build(
+            logicalDevice->handle(), 
+            physicalDevice->handle());
+        auto depthImageView = vulkan::window::VulkanImageView();
+        
+        depthImageView.create(
+            logicalDevice->handle(), 
+            depthImage.handle(), 
+            VK_IMAGE_VIEW_TYPE_2D, 
+            imageFormat,
+            { 
+                VK_COMPONENT_SWIZZLE_IDENTITY,
+                VK_COMPONENT_SWIZZLE_IDENTITY,
+                VK_COMPONENT_SWIZZLE_IDENTITY,
+                VK_COMPONENT_SWIZZLE_IDENTITY 
+            }, 
+            { 
+                vulkan::util::depthStencilAspectFlags(imageFormat),
+                0,
+                1,
+                0,
+                1
+            }
+        );
+        
+        renderResources->setDepthEntry(std::move(depthImage), std::move(depthImageView));
     }
 
     void vulkan::vulkanRenderer::createSwapchainFramebuffers()
@@ -344,6 +396,7 @@ namespace projectv
             fbBuilder
                 .setRenderPass(renderPass)
                 .addAttachment(imageView.handle())
+                .addAttachment(renderResources->getDepthImageView().handle())
                 .setExtent(extent.width, extent.height)
                 .setLayers(1);
 

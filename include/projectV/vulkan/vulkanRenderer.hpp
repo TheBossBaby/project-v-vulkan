@@ -78,6 +78,22 @@ namespace projectv
         private:
             void createSwapchainRenderPass();
 
+            /**
+             * @brief Creates the depth image and its view and stores them in
+             *        the renderer resources.
+             *
+             * Picks the first supported depth format, then creates an image
+             * matching the swapchain extent and a 2D view of its depth aspect.
+             * Must run after the swapchain is created and before
+             * createSwapchainRenderPass() and createSwapchainFramebuffers(),
+             * which read the depth format and view.
+             *
+             * @throws std::runtime_error if no candidate format is supported,
+             *         or if creating the image or its view fails.
+             */
+            // TODO(resize)
+            void createDepthBuffer();
+
             void createSwapchainFramebuffers();
 
             void createRenderFinishedSemaphores();

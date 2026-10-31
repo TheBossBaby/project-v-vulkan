@@ -104,6 +104,24 @@ namespace projectv
             return *this;
         }
 
+        VulkanGraphicsPipelineBuilder &VulkanGraphicsPipelineBuilder::setDepthTest(VkBool32 state)
+        {
+            m_depthTestEnable = state;
+            return *this;
+        }
+
+        VulkanGraphicsPipelineBuilder &VulkanGraphicsPipelineBuilder::setDepthWrite(VkBool32 state)
+        {
+            m_depthWriteEnable = state;
+            return *this;
+        }
+
+        VulkanGraphicsPipelineBuilder &VulkanGraphicsPipelineBuilder::setDepthCompareOperation(VkCompareOp inCompareOp)
+        {
+            m_depthCompareOp = inCompareOp;
+            return *this;
+        }
+
         void VulkanGraphicsPipelineBuilder::validate(VkDevice device) const
         {
             if (device == VK_NULL_HANDLE)
@@ -230,6 +248,25 @@ namespace projectv
             return dynamicState;
         }
 
+        VkPipelineDepthStencilStateCreateInfo VulkanGraphicsPipelineBuilder::buildDepthStencilStateInfo() const
+        {
+            VkPipelineDepthStencilStateCreateInfo depthStencilState{};
+            depthStencilState.sType = VK_STRUCTURE_TYPE_PIPELINE_DEPTH_STENCIL_STATE_CREATE_INFO;
+
+            depthStencilState.depthTestEnable       = m_depthTestEnable;
+            depthStencilState.depthWriteEnable      = m_depthWriteEnable;
+            depthStencilState.depthCompareOp        = m_depthCompareOp;
+            depthStencilState.depthBoundsTestEnable = m_depthBoundsTestEnable;
+            depthStencilState.minDepthBounds        = m_minDepthBounds;
+            depthStencilState.maxDepthBounds        = m_maxDepthBounds;
+
+            depthStencilState.stencilTestEnable = m_stencilTestEnable;
+            depthStencilState.front             = m_stencilFront;
+            depthStencilState.back              = m_stencilBack;
+
+            return depthStencilState;  
+        }
+
         rendererResources::VulkanGraphicsPipeline VulkanGraphicsPipelineBuilder::build(VkDevice device)
         {
             validate(device);
@@ -241,6 +278,7 @@ namespace projectv
             VkPipelineViewportStateCreateInfo      viewportState      = buildViewportStateInfo();
             VkPipelineRasterizationStateCreateInfo rasterizationState = buildRasterizationStateInfo();
             VkPipelineMultisampleStateCreateInfo   multisampleState   = buildMultisampleStateInfo();
+            VkPipelineDepthStencilStateCreateInfo  depthStencilState  = buildDepthStencilStateInfo();
             VkPipelineColorBlendStateCreateInfo    colorBlendState    = buildColorBlendStateInfo(colorBlendAttachments);
             VkPipelineDynamicStateCreateInfo       dynamicState       = buildDynamicStateInfo();
 
@@ -254,7 +292,7 @@ namespace projectv
             createInfo.pViewportState      = &viewportState;
             createInfo.pRasterizationState = &rasterizationState;
             createInfo.pMultisampleState   = &multisampleState;
-            createInfo.pDepthStencilState  = nullptr;
+            createInfo.pDepthStencilState  = &depthStencilState;
             createInfo.pColorBlendState    = &colorBlendState;
             createInfo.pDynamicState       = &dynamicState;
             createInfo.layout              = m_pipelineLayout;
