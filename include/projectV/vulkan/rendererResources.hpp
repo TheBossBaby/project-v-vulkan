@@ -8,6 +8,8 @@
 #include <vulkan/rendererResources/vulkanFramebuffer.hpp>
 #include <vulkan/rendererResources/vulkanPipelineLayout.hpp>
 #include <vulkan/rendererResources/vulkanGraphicsPipeline.hpp>
+#include <vulkan/rendererResources/vulkanImage.hpp>
+#include <vulkan/window/VulkanImageView.hpp>
 
 #include <vector>
 namespace projectv
@@ -72,8 +74,39 @@ namespace projectv
              */
             const GraphicsPipelineEntry* graphicsPipeline(core::GraphicsPipelineHandle handle) const;
 
+            /**
+             * @brief Takes ownership of the depth image and its view.
+             *
+             * Any previously stored image and view are destroyed, so the GPU
+             * must have finished using them.
+             *
+             * @param inDepthImage     Depth image to store; moved into the cache.
+             * @param inDepthImageView View of @p inDepthImage; moved into the cache.
+             */
+            void setDepthEntry( rendererResources::VulkanImage inDepthImage, window::VulkanImageView inDepthImageView);
+
+            /**
+             * @brief Returns the stored depth image.
+             * @return The depth image, or an empty wrapper if setDepthEntry()
+             *         has not been called.
+             */
+            const rendererResources::VulkanImage& getDepthImage() const;
+
+            /**
+             * @brief Returns the view of the stored depth image.
+             * @return The depth image view, or an empty wrapper if
+             *         setDepthEntry() has not been called.
+             */
+            const window::VulkanImageView& getDepthImageView() const;
+
         private:
             VulkanRenderPass m_renderPass;
+
+            /// Depth image shared by every swapchain framebuffer.
+            rendererResources::VulkanImage m_depthImage;
+
+            /// View of m_depthImage, attached to every swapchain framebuffer.
+            window::VulkanImageView m_depthImageView;
 
             std::vector<rendererResources::VulkanFramebuffer> m_framebuffers;
 

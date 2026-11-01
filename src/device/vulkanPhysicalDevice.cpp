@@ -52,6 +52,30 @@ namespace projectv
             
         }
 
+        VkFormat VulkanPhysicalDevice::findSupportedFormat(const std::vector<VkFormat> &candidates, VkImageTiling tiling, VkFormatFeatureFlags features) const
+        {
+            if (physicalDevice == VK_NULL_HANDLE) throw std::runtime_error("VulkanPhysicalDevice::findSupportedFormat, failed to find a suitable GPU!");
+
+            for (VkFormat format : candidates)
+            {
+                VkFormatProperties properties;
+                vkGetPhysicalDeviceFormatProperties(physicalDevice, format, &properties);
+
+                if( tiling == VK_IMAGE_TILING_LINEAR && (properties.linearTilingFeatures & features) == features)
+                {
+                    return format;
+                }
+                
+                if ( tiling == VK_IMAGE_TILING_OPTIMAL && (properties.optimalTilingFeatures & features) == features)
+                {
+                    return format;
+                }
+            }
+
+            engine::LogError("VulkanPhysicalDevice::findSupportedFormat, Failed to find supported format!");
+            throw std::runtime_error("VulkanPhysicalDevice::findSupportedFormat, Failed to find supported format!");
+        }
+
         VkPhysicalDevice VulkanPhysicalDevice::handle() const noexcept
         {
             return physicalDevice;

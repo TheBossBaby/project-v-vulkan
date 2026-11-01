@@ -65,5 +65,21 @@ namespace projectv
 
             return &m_graphicsPipelines[handle.index];
         }
+
+        void RendererResources::setDepthEntry(rendererResources::VulkanImage inDepthImage, window::VulkanImageView inDepthImageView)
+        {
+            m_depthImage     = std::move(inDepthImage);
+            m_depthImageView = std::move(inDepthImageView);
+        }
+        
+        const rendererResources::VulkanImage &RendererResources::getDepthImage() const
+        {
+            return m_depthImage;
+        }
+
+        const window::VulkanImageView &RendererResources::getDepthImageView() const
+        {
+            return m_depthImageView;
+        }
     }
 }
