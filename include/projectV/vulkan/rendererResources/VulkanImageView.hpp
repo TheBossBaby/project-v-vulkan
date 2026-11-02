@@ -3,7 +3,7 @@
 
 namespace projectv
 {
-    namespace vulkan::window
+    namespace vulkan::rendererResources
     {
         /**
          * @brief RAII wrapper around a Vulkan image view.

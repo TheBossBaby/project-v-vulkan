@@ -1,11 +1,11 @@
 #include <projectV/engine/logging/log.hpp>
 
-#include <vulkan/window/VulkanImageView.hpp>
+#include <vulkan/rendererResources/VulkanImageView.hpp>
 #include <vulkan/util/vulkanCheck.hpp>
 
 namespace projectv
 {
-    namespace vulkan::window
+    namespace vulkan::rendererResources
     {
         VulkanImageView::~VulkanImageView()
         {

@@ -9,7 +9,7 @@
 #include <vulkan/rendererResources/vulkanPipelineLayout.hpp>
 #include <vulkan/rendererResources/vulkanGraphicsPipeline.hpp>
 #include <vulkan/rendererResources/vulkanImage.hpp>
-#include <vulkan/window/VulkanImageView.hpp>
+#include <vulkan/rendererResources/VulkanImageView.hpp>
 
 #include <vector>
 namespace projectv
@@ -83,7 +83,7 @@ namespace projectv
              * @param inDepthImage     Depth image to store; moved into the cache.
              * @param inDepthImageView View of @p inDepthImage; moved into the cache.
              */
-            void setDepthEntry( rendererResources::VulkanImage inDepthImage, window::VulkanImageView inDepthImageView);
+            void setDepthEntry( rendererResources::VulkanImage inDepthImage, rendererResources::VulkanImageView inDepthImageView);
 
             /**
              * @brief Returns the stored depth image.
@@ -97,7 +97,7 @@ namespace projectv
              * @return The depth image view, or an empty wrapper if
              *         setDepthEntry() has not been called.
              */
-            const window::VulkanImageView& getDepthImageView() const;
+            const rendererResources::VulkanImageView& getDepthImageView() const;
 
         private:
             VulkanRenderPass m_renderPass;
@@ -106,7 +106,7 @@ namespace projectv
             rendererResources::VulkanImage m_depthImage;
 
             /// View of m_depthImage, attached to every swapchain framebuffer.
-            window::VulkanImageView m_depthImageView;
+            rendererResources::VulkanImageView m_depthImageView;
 
             std::vector<rendererResources::VulkanFramebuffer> m_framebuffers;
 

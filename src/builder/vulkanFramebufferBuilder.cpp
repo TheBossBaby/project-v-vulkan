@@ -23,7 +23,7 @@ namespace projectv
                 return *this;
             }
 
-            VulkanFramebufferBuilder& VulkanFramebufferBuilder::setAttachments(std::span<const window::VulkanImageView> attachments)
+            VulkanFramebufferBuilder& VulkanFramebufferBuilder::setAttachments(std::span<const rendererResources::VulkanImageView> attachments)
             {
                 m_attachments.clear();
 

@@ -45,7 +45,7 @@ namespace projectv
             return m_images;
         }
 
-        std::span<const VulkanImageView> VulkanSwapchain::imageViews() const noexcept
+        std::span<const rendererResources::VulkanImageView> VulkanSwapchain::imageViews() const noexcept
         {
             return m_imageViews;
         }
