@@ -136,6 +136,22 @@ namespace projectv
             vkCmdPushConstants(commandBuffer, pipelineLayout.handle(), stageFlags, offSet, size, pValues);
         }
 
+        void VulkanCommandBuffer::copyBuffer(VkBuffer source, VkBuffer desination, VkDeviceSize size, VkDeviceSize srcOffset, VkDeviceSize dstOffset)
+        {
+            if( size <= 0)
+            {
+                engine::LogError("VulkanCommandBuffer::copyBuffer, size is lesser or equal to zero");
+                throw std::runtime_error("VulkanCommandBuffer::copyBuffer, size is lesser or equal to zero");
+            }
+
+            VkBufferCopy copyRegion{};
+            copyRegion.srcOffset = srcOffset;
+            copyRegion.dstOffset = dstOffset;
+            copyRegion.size = size;
+
+            vkCmdCopyBuffer(commandBuffer, source, desination, 1, &copyRegion);
+        }
+
         VkCommandBuffer VulkanCommandBuffer::handle() const noexcept
         {
             return commandBuffer;

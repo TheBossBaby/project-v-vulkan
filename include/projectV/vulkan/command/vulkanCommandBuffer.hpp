@@ -40,12 +40,34 @@ namespace projectv::vulkan::command
         friend class VulkanCommandPool;
 
     public:
+        /// Non-copyable: two wrappers would record into the same command buffer.
         VulkanCommandBuffer(const VulkanCommandBuffer&) = delete;
+
+        /// Non-copyable: two wrappers would record into the same command buffer.
         VulkanCommandBuffer& operator=(const VulkanCommandBuffer&) = delete;
 
+        /**
+         * @brief Move-constructs from another wrapper.
+         *
+         * The defaulted move copies the handle, so the source still refers
+         * to the same command buffer afterwards; do not record through it.
+         */
         VulkanCommandBuffer(VulkanCommandBuffer&&) noexcept = default;
+
+        /**
+         * @brief Move-assigns from another wrapper.
+         *
+         * The defaulted move copies the handle, so the source still refers
+         * to the same command buffer afterwards; do not record through it.
+         *
+         * @return Reference to this object.
+         */
         VulkanCommandBuffer& operator=(VulkanCommandBuffer&&) noexcept = default;
 
+        /**
+         * @brief Does nothing; the owning VulkanCommandPool frees the
+         *        command buffer.
+         */
         ~VulkanCommandBuffer() = default;
 
         /**
@@ -187,7 +209,46 @@ namespace projectv::vulkan::command
          */
         void bindIndexBuffer(const rendererResources::VulkanBuffer& buffer, VkIndexType indexType, uint64_t offSet = 0);
 
+        /**
+         * @brief Updates push constant values for subsequent draws.
+         *
+         * @p offSet and @p size must be multiples of 4 and lie inside a push
+         * constant range of @p pipelineLayout that covers @p stageFlags.
+         *
+         * @param pipelineLayout Layout declaring the push constant range; must
+         *                       be compatible with the pipelines used by the
+         *                       following draws.
+         * @param stageFlags     Shader stages that read the updated range.
+         * @param offSet         Byte offset of the first value to update.
+         * @param size           Number of bytes to update.
+         * @param pValues        Source data, at least @p size bytes. Copied
+         *                       during the call.
+         */
         void pushConstants(const rendererResources::VulkanPipelineLayout &pipelineLayout, VkShaderStageFlags stageFlags, uint32_t offSet, uint32_t size, const void *pValues);
+
+        /**
+         * @brief Records a copy of @p size bytes from one buffer to another.
+         *
+         * Typically used to upload data from a host-visible staging buffer
+         * into a device-local buffer. The copy is only recorded here; it
+         * runs when this command buffer is submitted, so both buffers must
+         * stay alive until the GPU has finished executing it.
+         *
+         * Must be recorded outside a render pass. @p source needs
+         * VK_BUFFER_USAGE_TRANSFER_SRC_BIT and @p desination needs
+         * VK_BUFFER_USAGE_TRANSFER_DST_BIT. Both ranges must fit inside
+         * their buffers: srcOffset + size <= size of @p source, and
+         * dstOffset + size <= size of @p desination.
+         *
+         * @param source     Buffer to copy from.
+         * @param desination Buffer to copy to.
+         * @param size       Number of bytes to copy; must not be 0.
+         * @param srcOffset  Byte offset into @p source where the copy starts (default: 0).
+         * @param dstOffset  Byte offset into @p desination where the data is written (default: 0).
+         *
+         * @throws std::runtime_error if @p size is 0.
+         */
+        void copyBuffer(VkBuffer source, VkBuffer desination, VkDeviceSize size, VkDeviceSize srcOffset = 0, VkDeviceSize dstOffset = 0);
 
         /**
          * @brief Returns the underlying Vulkan command buffer handle.
