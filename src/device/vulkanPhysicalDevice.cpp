@@ -76,6 +76,53 @@ namespace projectv
             throw std::runtime_error("VulkanPhysicalDevice::findSupportedFormat, Failed to find supported format!");
         }
 
+        bool VulkanPhysicalDevice::hasUnifiedMemory() const
+        {
+            VkPhysicalDeviceProperties deviceProperties;
+            vkGetPhysicalDeviceProperties(physicalDevice, &deviceProperties);
+
+            VkPhysicalDeviceMemoryProperties memoryProperties;
+            vkGetPhysicalDeviceMemoryProperties(physicalDevice, &memoryProperties);
+
+            // The spec requires a UMA driver to advertise its shared heap as device-local, so a
+            // heap that is not device-local is separate host-only memory, i.e. a discrete GPU.
+            bool bAllHeapsDeviceLocal = true;
+
+            for (uint32_t i = 0; i < memoryProperties.memoryHeapCount; ++i)
+            {
+                if (!(memoryProperties.memoryHeaps[i].flags & VK_MEMORY_HEAP_DEVICE_LOCAL_BIT))
+                {
+                    bAllHeapsDeviceLocal = false;
+                    break;
+                }
+            }
+
+            // A driver may split an integrated GPU's memory over several heaps, so the device type counts too.
+            const bool bSharesHostMemory = deviceProperties.deviceType == VK_PHYSICAL_DEVICE_TYPE_INTEGRATED_GPU
+                                        || bAllHeapsDeviceLocal;
+
+            if (!bSharesHostMemory)
+            {
+                return false;
+            }
+
+            // Shared memory is only usable for direct writes if it can be mapped, and VulkanBuffer::write()
+            // does not flush, so it must also be coherent.
+            constexpr VkMemoryPropertyFlags DIRECT_WRITE_FLAGS = VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT
+                                                               | VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT
+                                                               | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT;
+
+            for (uint32_t i = 0; i < memoryProperties.memoryTypeCount; ++i)
+            {
+                if ((memoryProperties.memoryTypes[i].propertyFlags & DIRECT_WRITE_FLAGS) == DIRECT_WRITE_FLAGS)
+                {
+                    return true;
+                }
+            }
+
+            return false;
+        }
+
         VkPhysicalDevice VulkanPhysicalDevice::handle() const noexcept
         {
             return physicalDevice;
