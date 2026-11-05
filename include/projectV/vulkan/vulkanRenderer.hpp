@@ -2,8 +2,10 @@
 
 #include <projectV/core/renderer.hpp>
 
-#include <vector>
 #include <vulkan/vulkan.h>
+
+#include <span>
+#include <vector>
 
 namespace projectv
 {
@@ -52,6 +54,26 @@ namespace projectv
 
         class vulkanRenderer : public core::IRenderer
         {
+        private:
+            /**
+             * @brief One buffer-to-buffer copy for submitCopy().
+             *
+             * Copies @c size bytes from offset 0 of @c srcBuffer to
+             * offset 0 of @c dstBuffer. The buffers are borrowed, not owned,
+             * and must stay alive until submitCopy() returns.
+             */
+            //ToDo : Move to some helper
+            struct BufferCopyJob
+            {
+                /// Buffer to copy from; needs VK_BUFFER_USAGE_TRANSFER_SRC_BIT.
+                VkBuffer     srcBuffer = VK_NULL_HANDLE;
+
+                /// Buffer to copy to; needs VK_BUFFER_USAGE_TRANSFER_DST_BIT.
+                VkBuffer     dstBuffer = VK_NULL_HANDLE;
+
+                /// Number of bytes to copy; must not be 0 and must fit in both buffers.
+                VkDeviceSize size      = 0;
+            };
         public:
             vulkanRenderer();
 
@@ -114,49 +136,34 @@ namespace projectv
             void createRenderFinishedSemaphores();
 
             void createFrameData();
-
+         
             /**
-             * @brief Creates a device-local buffer and fills it with the
-             *        contents of a staging buffer.
+             * @brief Runs a batch of buffer-to-buffer copies on the GPU and
+             *        waits for all of them to finish.
              *
-             * The new buffer has the same size as @p inStagingBuffer. The copy
-             * is done by submitCopy(), so this call blocks until the GPU has
-             * finished, and @p inStagingBuffer can be destroyed as soon as it
-             * returns.
+             * Records every job, in order, into one one-time command buffer
+             * from the graphics command pool, submits it once to the graphics
+             * queue, blocks the CPU on a fence until it completes, then frees
+             * the command buffer. A batch costs one submit and one wait, not
+             * one per copy. Meant for load time, not for every frame.
              *
-             * @param inStagingBuffer Host-visible buffer holding the data;
-             *                        needs VK_BUFFER_USAGE_TRANSFER_SRC_BIT.
-             * @param inUsageFlags    Usage of the new buffer; must include
-             *                        VK_BUFFER_USAGE_TRANSFER_DST_BIT.
-             * @return The device-local buffer holding a copy of the data.
+             * Every job is checked before the fence and command buffer are
+             * created, so an empty batch or a job with size 0 throws before
+             * anything is recorded or submitted.
              *
-             * @throws std::runtime_error if buffer creation, memory allocation
-             *         or the copy submission fails.
+             * No barriers are recorded between jobs, so the GPU may run them
+             * in any order or at the same time. A job must not read or write
+             * a range that another job in the same batch writes.
+             *
+             * @param bufferCopyJobs Copies to perform; must not be empty. The
+             *                       buffers they name only need to stay alive
+             *                       until this call returns.
+             *
+             * @throws std::runtime_error if @p bufferCopyJobs is empty, if any
+             *         job's size is 0, or if recording, submitting or waiting
+             *         for the copies fails.
              */
-            //ToDo Move it to a util file
-            [[nodiscard]]
-            rendererResources::VulkanBuffer uploadToDeviceLocal(const rendererResources::VulkanBuffer& inStagingBuffer, VkBufferUsageFlags inUsageFlags);
-            
-            /**
-             * @brief Copies @p size bytes from one buffer to another on the GPU
-             *        and waits for the copy to finish.
-             *
-             * Records the copy into a one-time command buffer from the graphics
-             * command pool, submits it to the graphics queue, blocks the CPU on
-             * a fence until it completes, then frees the command buffer. Meant
-             * for load time, not for every frame.
-             *
-             * @param srcBuffer Buffer to copy from; needs
-             *                  VK_BUFFER_USAGE_TRANSFER_SRC_BIT.
-             * @param dstBuffer Buffer to copy to; needs
-             *                  VK_BUFFER_USAGE_TRANSFER_DST_BIT.
-             * @param size      Number of bytes to copy, starting at offset 0 in
-             *                  both buffers; must not be 0.
-             *
-             * @throws std::runtime_error if @p size is 0, or if recording,
-             *         submitting or waiting for the copy fails.
-             */
-            void submitCopy(VkBuffer srcBuffer, VkBuffer dstBuffer, VkDeviceSize size);
+            void submitCopy(std::span<const BufferCopyJob> bufferCopyJobs);
             
             /**
              * @brief Uploads a mesh by writing it directly into buffers the
@@ -186,9 +193,10 @@ namespace projectv
              * and index buffers, and registers those with the renderer
              * resources.
              *
-             * Blocks until both GPU copies have finished, so the staging
-             * buffers can be released before returning. Meant for load time,
-             * not for every frame.
+             * Both copies go to the GPU in a single submitCopy() call, which
+             * blocks until they have finished, so the staging buffers can be
+             * released before returning. Meant for load time, not for every
+             * frame.
              *
              * @param mesh Mesh whose vertices and indices are copied.
              * @return Handle used to reference the uploaded mesh when drawing.

@@ -335,10 +335,23 @@ namespace projectv
 
         stagingVertexBuffer.write(mesh.vertices.data(), vertexBufferSize);
         stagingIndexBuffer.write(mesh.indices.data(), indexBufferSize);
+     
+        rendererResources::VulkanBuffer gpuVertexBuffer = createBuffer(
+            vertexBufferSize, 
+            VK_BUFFER_USAGE_VERTEX_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT, 
+            VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
+        rendererResources::VulkanBuffer gpuIndexBuffer = createBuffer(
+            indexBufferSize, 
+            VK_BUFFER_USAGE_INDEX_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT, 
+            VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
 
-        auto gpuVertexBuffer =  uploadToDeviceLocal(stagingVertexBuffer, VK_BUFFER_USAGE_VERTEX_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT);
-        auto gpuIndexBuffer  =  uploadToDeviceLocal(stagingIndexBuffer, VK_BUFFER_USAGE_INDEX_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT);
+        const std::array jobs{
+            BufferCopyJob{stagingVertexBuffer.handle(), gpuVertexBuffer.handle(), vertexBufferSize},
+            BufferCopyJob{stagingIndexBuffer.handle(),  gpuIndexBuffer.handle(),  indexBufferSize}
+        };
 
+        submitCopy(jobs);
+        
         return renderResources->addGpuMesh(
         {
             std::move(gpuVertexBuffer),
@@ -473,28 +486,34 @@ namespace projectv
         }
     }
 
-    vulkan::rendererResources::VulkanBuffer vulkan::vulkanRenderer::uploadToDeviceLocal(
-        const rendererResources::VulkanBuffer &inStagingBuffer, 
-        VkBufferUsageFlags inUsageFlags)
+    void vulkan::vulkanRenderer::submitCopy(std::span<const BufferCopyJob> bufferCopyJobs)
     {
-        rendererResources::VulkanBuffer buffer = createBuffer(
-            inStagingBuffer.getDeviceSize(), 
-            inUsageFlags, 
-            VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
+        if(bufferCopyJobs.empty())
+        {
+            engine::LogError("vulkan::vulkanRenderer::submitCopy, bufferCopyJobs count is zero");
+            throw std::runtime_error("vulkan::vulkanRenderer::submitCopy, bufferCopyJobs count is zero");
+        }
 
-        submitCopy(inStagingBuffer.handle(), buffer.handle(), inStagingBuffer.getDeviceSize());
+        for (const auto &bufferCopyJob : bufferCopyJobs) 
+        {
+            if(bufferCopyJob.size == 0)
+            {
+                engine::LogError("vulkan::vulkanRenderer::submitCopy, bufferCopyJob buffer size is zero");
+                throw std::runtime_error("vulkan::vulkanRenderer::submitCopy, bufferCopyJob buffer size is zero");
+            }
+        }
 
-        return buffer;
-    }
-
-    void vulkan::vulkanRenderer::submitCopy(VkBuffer srcBuffer, VkBuffer dstBuffer, VkDeviceSize size)
-    {
         projectv::vulkan::sync::VulkanFence fence{};
         fence.create(logicalDevice->handle(), false);
 
         auto stageBufferCommandBuffer = graphicsCommandPool->allocate(VK_COMMAND_BUFFER_LEVEL_PRIMARY); 
         stageBufferCommandBuffer.begin(VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT);
-        stageBufferCommandBuffer.copyBuffer(srcBuffer, dstBuffer, size);
+
+        for (const auto &bufferCopyJob : bufferCopyJobs) 
+        {
+            stageBufferCommandBuffer.copyBuffer(bufferCopyJob.srcBuffer, bufferCopyJob.dstBuffer, bufferCopyJob.size);
+        }
+
         stageBufferCommandBuffer.end();
 
         logicalDevice->graphicsQueue().submit(stageBufferCommandBuffer, fence);
