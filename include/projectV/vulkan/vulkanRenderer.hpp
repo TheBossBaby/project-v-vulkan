@@ -15,6 +15,7 @@ namespace projectv
         namespace command
         {
             class VulkanCommandPool;
+            class VulkanCommandBuffer;
         }
 
         namespace device
@@ -136,32 +137,57 @@ namespace projectv
             void createRenderFinishedSemaphores();
 
             void createFrameData();
+
+            /**
+             * @brief Allocates the primary command buffer that submitCopy()
+             *        records every upload into.
+             *
+             * Allocating it once and reusing it avoids allocating and freeing
+             * a command buffer on every upload. Must be called once, after
+             * graphicsCommandPool has been created and before the first
+             * submitCopy(); init() does this. The pool frees the command
+             * buffer when the pool is destroyed.
+             *
+             * @throws std::runtime_error if the command buffer allocation fails.
+             */
+            void createUploadCommandBuffer();
          
             /**
              * @brief Runs a batch of buffer-to-buffer copies on the GPU and
              *        waits for all of them to finish.
              *
-             * Records every job, in order, into one one-time command buffer
-             * from the graphics command pool, submits it once to the graphics
-             * queue, blocks the CPU on a fence until it completes, then frees
-             * the command buffer. A batch costs one submit and one wait, not
+             * Records every job, in order, into uploadCommandBuffer, submits
+             * it once to the graphics queue and blocks the CPU on a fence
+             * until it completes. A batch costs one submit and one wait, not
              * one per copy. Meant for load time, not for every frame.
              *
-             * Every job is checked before the fence and command buffer are
-             * created, so an empty batch or a job with size 0 throws before
-             * anything is recorded or submitted.
+             * The same command buffer is reused on every call. begin() resets
+             * it implicitly, and because this call waits for the GPU, it is
+             * never still pending when the next call starts. With only one
+             * upload command buffer, uploads cannot overlap. It comes from
+             * graphicsCommandPool, so call this on the thread that records
+             * frames: Vulkan allows a pool and its command buffers to be used
+             * by only one thread at a time.
+             *
+             * The command buffer and every job are checked before the fence
+             * is created, so a missing command buffer, an empty batch or a
+             * job with size 0 throws before anything is recorded or
+             * submitted.
              *
              * No barriers are recorded between jobs, so the GPU may run them
              * in any order or at the same time. A job must not read or write
              * a range that another job in the same batch writes.
              *
+             * @pre createUploadCommandBuffer() has been called.
+             *
              * @param bufferCopyJobs Copies to perform; must not be empty. The
              *                       buffers they name only need to stay alive
              *                       until this call returns.
              *
-             * @throws std::runtime_error if @p bufferCopyJobs is empty, if any
-             *         job's size is 0, or if recording, submitting or waiting
-             *         for the copies fails.
+             * @throws std::runtime_error if uploadCommandBuffer has not been
+             *         created, if @p bufferCopyJobs is empty, if any job's
+             *         size is 0, or if recording, submitting or waiting for
+             *         the copies fails.
              */
             void submitCopy(std::span<const BufferCopyJob> bufferCopyJobs);
             
@@ -247,6 +273,16 @@ namespace projectv
             core::IWindow* window = nullptr;
 
             std::vector<sync::VulkanSemaphore> renderFinishedSemaphoreList;
+
+            /**
+             * @brief Primary command buffer reused by every submitCopy() call.
+             *
+             * Allocated once from graphicsCommandPool by
+             * createUploadCommandBuffer(); null until then. Declared after
+             * graphicsCommandPool, so this wrapper is destroyed first; the
+             * pool frees the command buffer itself.
+             */
+            std::unique_ptr<command::VulkanCommandBuffer> uploadCommandBuffer;
 
             uint32_t currentImageIndex = UINT32_MAX;
 

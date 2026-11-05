@@ -95,6 +95,8 @@ namespace projectv
         graphicsCommandPool->create(logicalDevice->handle(), physicalDevice->queueFamilies().graphics.value());
 
         createFrameData();
+ 
+        createUploadCommandBuffer();
 
         return true;
     }
@@ -486,8 +488,20 @@ namespace projectv
         }
     }
 
+    void vulkan::vulkanRenderer::createUploadCommandBuffer()
+    {
+        uploadCommandBuffer = std::make_unique<command::VulkanCommandBuffer>(
+            graphicsCommandPool->allocate(VK_COMMAND_BUFFER_LEVEL_PRIMARY));
+    }
+
     void vulkan::vulkanRenderer::submitCopy(std::span<const BufferCopyJob> bufferCopyJobs)
     {
+        if(!uploadCommandBuffer)
+        {
+            engine::LogError("vulkan::vulkanRenderer::submitCopy, uploadCommandBuffer is invalid");
+            throw std::runtime_error("vulkan::vulkanRenderer::submitCopy, uploadCommandBuffer is invalid");
+        }
+
         if(bufferCopyJobs.empty())
         {
             engine::LogError("vulkan::vulkanRenderer::submitCopy, bufferCopyJobs count is zero");
@@ -502,22 +516,21 @@ namespace projectv
                 throw std::runtime_error("vulkan::vulkanRenderer::submitCopy, bufferCopyJob buffer size is zero");
             }
         }
+        auto& uploadCmd = *uploadCommandBuffer;
 
         projectv::vulkan::sync::VulkanFence fence{};
         fence.create(logicalDevice->handle(), false);
 
-        auto stageBufferCommandBuffer = graphicsCommandPool->allocate(VK_COMMAND_BUFFER_LEVEL_PRIMARY); 
-        stageBufferCommandBuffer.begin(VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT);
+        uploadCmd.begin(VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT);
 
         for (const auto &bufferCopyJob : bufferCopyJobs) 
         {
-            stageBufferCommandBuffer.copyBuffer(bufferCopyJob.srcBuffer, bufferCopyJob.dstBuffer, bufferCopyJob.size);
+            uploadCmd.copyBuffer(bufferCopyJob.srcBuffer, bufferCopyJob.dstBuffer, bufferCopyJob.size);
         }
 
-        stageBufferCommandBuffer.end();
+        uploadCmd.end();
 
-        logicalDevice->graphicsQueue().submit(stageBufferCommandBuffer, fence);
+        logicalDevice->graphicsQueue().submit(uploadCmd, fence);
         fence.wait();
-        graphicsCommandPool->free(stageBufferCommandBuffer);
     }
 }
