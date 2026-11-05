@@ -21,11 +21,11 @@ namespace projectv
         {
         }
 
-        void VulkanCommandBuffer::begin()
+        void VulkanCommandBuffer::begin(VkCommandBufferUsageFlags flags)
         {
             VkCommandBufferBeginInfo beginInfo{};
             beginInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
-            beginInfo.flags = 0; // No special recording behavior.
+            beginInfo.flags = flags;
             beginInfo.pInheritanceInfo = nullptr; // Optional
 
             vkCheck(vkBeginCommandBuffer(commandBuffer, &beginInfo), 
@@ -134,6 +134,22 @@ namespace projectv
         void VulkanCommandBuffer::pushConstants(const rendererResources::VulkanPipelineLayout &pipelineLayout, VkShaderStageFlags stageFlags, uint32_t offSet, uint32_t size, const void *pValues)
         {
             vkCmdPushConstants(commandBuffer, pipelineLayout.handle(), stageFlags, offSet, size, pValues);
+        }
+
+        void VulkanCommandBuffer::copyBuffer(VkBuffer source, VkBuffer destination, VkDeviceSize size, VkDeviceSize srcOffset, VkDeviceSize dstOffset)
+        {
+            if( size == 0)
+            {
+                engine::LogError("VulkanCommandBuffer::copyBuffer, size is equal to zero");
+                throw std::runtime_error("VulkanCommandBuffer::copyBuffer, size is equal to zero");
+            }
+
+            VkBufferCopy copyRegion{};
+            copyRegion.srcOffset = srcOffset;
+            copyRegion.dstOffset = dstOffset;
+            copyRegion.size = size;
+
+            vkCmdCopyBuffer(commandBuffer, source, destination, 1, &copyRegion);
         }
 
         VkCommandBuffer VulkanCommandBuffer::handle() const noexcept

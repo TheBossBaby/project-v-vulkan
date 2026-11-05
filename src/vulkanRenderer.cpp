@@ -6,8 +6,6 @@
 
 #include <projectV/engine/logging/log.hpp>
 
-#include <vulkan/vulkan.h>
-
 #include <vulkan/builder/vulkanBufferBuilder.hpp>
 #include <vulkan/builder/VulkanRenderPassBuilder.hpp>
 #include <vulkan/builder/vulkanFramebufferBuilder.hpp>
@@ -97,6 +95,8 @@ namespace projectv
         graphicsCommandPool->create(logicalDevice->handle(), physicalDevice->queueFamilies().graphics.value());
 
         createFrameData();
+ 
+        createUploadCommandBuffer();
 
         return true;
     }
@@ -204,33 +204,12 @@ namespace projectv
 
     core::gpu::GpuMeshHandle vulkan::vulkanRenderer::uploadMesh(const struct core::Mesh& mesh)
     {
-        auto vertexBufferSize = sizeof(mesh.vertices[0]) * mesh.vertices.size();
-        auto indexBufferSize  = sizeof(mesh.indices[0]) * mesh.indices.size();
+        if(physicalDevice->hasUnifiedMemory())
+        {
+            return unifiedMemoryUpload(mesh);
+        }
 
-        rendererResources::VulkanBuffer vertexBuffer = builder::VulkanBufferBuilder()
-        .setDeviceSize(vertexBufferSize)
-        .setSharingMode(VK_SHARING_MODE_EXCLUSIVE)
-        .setUsageFlags(VK_BUFFER_USAGE_VERTEX_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT)
-        .setMemoryProperties(VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT)
-        .build(logicalDevice->handle(), physicalDevice->handle());
-
-        rendererResources::VulkanBuffer indexBuffer = builder::VulkanBufferBuilder()
-        .setDeviceSize(indexBufferSize)
-        .setSharingMode(VK_SHARING_MODE_EXCLUSIVE)
-        .setUsageFlags(VK_BUFFER_USAGE_INDEX_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT)
-        .setMemoryProperties(VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT)
-        .build(logicalDevice->handle(), physicalDevice->handle());
-
-        vertexBuffer.write(mesh.vertices.data(), vertexBufferSize);
-        indexBuffer.write(mesh.indices.data(), indexBufferSize);
-
-        return renderResources->addGpuMesh(
-            {
-                std::move(vertexBuffer),
-                std::move(indexBuffer),
-                static_cast<std::uint32_t>(mesh.indices.size())
-            }
-        );
+        return stagedUpload(mesh);
     }
 
     core::GraphicsPipelineHandle vulkan::vulkanRenderer::createGraphicsPipeline(
@@ -312,7 +291,85 @@ namespace projectv
             engine::LogTrace("vulkan::vulkanRenderer::waitIdle, wait idle is not running as logical device is not created or it's vulkan Handle is NULL");
             return;
         }
-        vkCheck(vkDeviceWaitIdle(logicalDevice->handle()), "vulkan::vulkanRenderer::waitIdle, Wait ideal failed !");
+        vkCheck(vkDeviceWaitIdle(logicalDevice->handle()), "vulkan::vulkanRenderer::waitIdle, Wait idle failed !");
+    }
+
+    core::gpu::GpuMeshHandle vulkan::vulkanRenderer::unifiedMemoryUpload(const core::Mesh &mesh)
+    {
+        auto vertexBufferSize = sizeof(mesh.vertices[0]) * mesh.vertices.size();
+        auto indexBufferSize  = sizeof(mesh.indices[0]) * mesh.indices.size();
+
+        rendererResources::VulkanBuffer vertexBuffer = createBuffer(
+            vertexBufferSize, 
+            VK_BUFFER_USAGE_VERTEX_BUFFER_BIT, 
+            VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT | VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
+
+        rendererResources::VulkanBuffer indexBuffer = createBuffer(
+            indexBufferSize,
+            VK_BUFFER_USAGE_INDEX_BUFFER_BIT, 
+            VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT | VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
+
+        vertexBuffer.write(mesh.vertices.data(), vertexBufferSize);
+        indexBuffer.write(mesh.indices.data(), indexBufferSize);
+
+        return renderResources->addGpuMesh(
+            {
+                std::move(vertexBuffer),
+                std::move(indexBuffer),
+                static_cast<std::uint32_t>(mesh.indices.size())
+            }
+        );
+    }
+
+    core::gpu::GpuMeshHandle vulkan::vulkanRenderer::stagedUpload(const core::Mesh &mesh)
+    {
+        auto vertexBufferSize = sizeof(mesh.vertices[0]) * mesh.vertices.size();
+        auto indexBufferSize  = sizeof(mesh.indices[0]) * mesh.indices.size();
+
+        rendererResources::VulkanBuffer stagingVertexBuffer = createBuffer(
+            vertexBufferSize, 
+            VK_BUFFER_USAGE_TRANSFER_SRC_BIT, 
+            VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
+        rendererResources::VulkanBuffer stagingIndexBuffer = createBuffer(
+            indexBufferSize, 
+            VK_BUFFER_USAGE_TRANSFER_SRC_BIT, 
+            VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
+
+        stagingVertexBuffer.write(mesh.vertices.data(), vertexBufferSize);
+        stagingIndexBuffer.write(mesh.indices.data(), indexBufferSize);
+     
+        rendererResources::VulkanBuffer gpuVertexBuffer = createBuffer(
+            vertexBufferSize, 
+            VK_BUFFER_USAGE_VERTEX_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT, 
+            VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
+        rendererResources::VulkanBuffer gpuIndexBuffer = createBuffer(
+            indexBufferSize, 
+            VK_BUFFER_USAGE_INDEX_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT, 
+            VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
+
+        const std::array jobs{
+            BufferCopyJob{stagingVertexBuffer.handle(), gpuVertexBuffer.handle(), vertexBufferSize},
+            BufferCopyJob{stagingIndexBuffer.handle(),  gpuIndexBuffer.handle(),  indexBufferSize}
+        };
+
+        submitCopy(jobs);
+        
+        return renderResources->addGpuMesh(
+        {
+            std::move(gpuVertexBuffer),
+            std::move(gpuIndexBuffer),
+            static_cast<std::uint32_t>(mesh.indices.size())
+        });
+    }
+
+    vulkan::rendererResources::VulkanBuffer vulkan::vulkanRenderer::createBuffer(VkDeviceSize size, VkBufferUsageFlags usage, VkMemoryPropertyFlags memory)
+    {
+        return builder::VulkanBufferBuilder()
+        .setDeviceSize(size)
+        .setSharingMode(VK_SHARING_MODE_EXCLUSIVE)
+        .setUsageFlags(usage)
+        .setMemoryProperties(memory)
+        .build(logicalDevice->handle(), physicalDevice->handle());
     }
 
     void vulkan::vulkanRenderer::createSwapchainRenderPass()
@@ -429,5 +486,51 @@ namespace projectv
             frame.inFlight.create(logicalDevice->handle(), true);
             frame.imageAvailableSemaphore.create(logicalDevice->handle());
         }
+    }
+
+    void vulkan::vulkanRenderer::createUploadCommandBuffer()
+    {
+        uploadCommandBuffer = std::make_unique<command::VulkanCommandBuffer>(
+            graphicsCommandPool->allocate(VK_COMMAND_BUFFER_LEVEL_PRIMARY));
+    }
+
+    void vulkan::vulkanRenderer::submitCopy(std::span<const BufferCopyJob> bufferCopyJobs)
+    {
+        if(!uploadCommandBuffer)
+        {
+            engine::LogError("vulkan::vulkanRenderer::submitCopy, uploadCommandBuffer is invalid");
+            throw std::runtime_error("vulkan::vulkanRenderer::submitCopy, uploadCommandBuffer is invalid");
+        }
+
+        if(bufferCopyJobs.empty())
+        {
+            engine::LogError("vulkan::vulkanRenderer::submitCopy, bufferCopyJobs count is zero");
+            throw std::runtime_error("vulkan::vulkanRenderer::submitCopy, bufferCopyJobs count is zero");
+        }
+
+        for (const auto &bufferCopyJob : bufferCopyJobs) 
+        {
+            if(bufferCopyJob.size == 0)
+            {
+                engine::LogError("vulkan::vulkanRenderer::submitCopy, bufferCopyJob buffer size is zero");
+                throw std::runtime_error("vulkan::vulkanRenderer::submitCopy, bufferCopyJob buffer size is zero");
+            }
+        }
+        auto& uploadCmd = *uploadCommandBuffer;
+
+        projectv::vulkan::sync::VulkanFence fence{};
+        fence.create(logicalDevice->handle(), false);
+
+        uploadCmd.begin(VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT);
+
+        for (const auto &bufferCopyJob : bufferCopyJobs) 
+        {
+            uploadCmd.copyBuffer(bufferCopyJob.srcBuffer, bufferCopyJob.dstBuffer, bufferCopyJob.size);
+        }
+
+        uploadCmd.end();
+
+        logicalDevice->graphicsQueue().submit(uploadCmd, fence);
+        fence.wait();
     }
 }

@@ -43,6 +43,17 @@ namespace projectv
             return VulkanCommandBuffer (commandBuffer);
         }
 
+        void VulkanCommandPool::free(VulkanCommandBuffer& commandBuffer)
+        {
+            vkFreeCommandBuffers(device, commandPool, 1, &commandBuffer.commandBuffer);
+            commandBuffer.commandBuffer = VK_NULL_HANDLE;
+        }
+
+        void VulkanCommandPool::reset(VulkanCommandBuffer& commandBuffer, VkCommandBufferResetFlags flags)
+        {
+            vkCheck(vkResetCommandBuffer(commandBuffer.commandBuffer, flags), "VulkanCommandPool::reset, Failed to reset command buffer!");
+        }
+
         void VulkanCommandPool::destroy()
         {
             if(commandPool != VK_NULL_HANDLE && device != VK_NULL_HANDLE)

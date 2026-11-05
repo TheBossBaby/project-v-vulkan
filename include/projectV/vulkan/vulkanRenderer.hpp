@@ -2,6 +2,9 @@
 
 #include <projectV/core/renderer.hpp>
 
+#include <vulkan/vulkan.h>
+
+#include <span>
 #include <vector>
 
 namespace projectv
@@ -12,6 +15,7 @@ namespace projectv
         namespace command
         {
             class VulkanCommandPool;
+            class VulkanCommandBuffer;
         }
 
         namespace device
@@ -40,12 +44,37 @@ namespace projectv
             class VulkanSwapchain;
         }
 
+        namespace rendererResources
+        {
+            class VulkanBuffer;
+        }
+
         class RendererResources;
 
         struct FrameData;
 
         class vulkanRenderer : public core::IRenderer
         {
+        private:
+            /**
+             * @brief One buffer-to-buffer copy for submitCopy().
+             *
+             * Copies @c size bytes from offset 0 of @c srcBuffer to
+             * offset 0 of @c dstBuffer. The buffers are borrowed, not owned,
+             * and must stay alive until submitCopy() returns.
+             */
+            //ToDo : Move to some helper
+            struct BufferCopyJob
+            {
+                /// Buffer to copy from; needs VK_BUFFER_USAGE_TRANSFER_SRC_BIT.
+                VkBuffer     srcBuffer = VK_NULL_HANDLE;
+
+                /// Buffer to copy to; needs VK_BUFFER_USAGE_TRANSFER_DST_BIT.
+                VkBuffer     dstBuffer = VK_NULL_HANDLE;
+
+                /// Number of bytes to copy; must not be 0 and must fit in both buffers.
+                VkDeviceSize size      = 0;
+            };
         public:
             vulkanRenderer();
 
@@ -60,12 +89,21 @@ namespace projectv
             void draw(const std::vector<core::Renderable>& items) override;
 
             /**
-             * @brief Uploads a CPU mesh into host-visible vertex and index
-             *        buffers and registers it with the renderer resources.
+             * @brief Uploads a CPU mesh to the GPU and registers it with the
+             *        renderer resources.
+             *
+             * Picks the upload path for the selected GPU. If hasUnifiedMemory()
+             * reports CPU-writable device-local memory, the mesh is written
+             * there directly (unifiedMemoryUpload()). Otherwise it goes through
+             * staging buffers into device-local memory (stagedUpload()),
+             * which blocks until the GPU copies have finished.
+             *
              * @param mesh Mesh whose vertices and indices are copied to the GPU.
+             *             Must contain at least one vertex and one index.
              * @return Handle used to reference the uploaded mesh when drawing.
              *
-             * @throws std::runtime_error if buffer creation or memory allocation fails.
+             * @throws std::runtime_error if buffer creation, memory allocation,
+             *         mapping or the copy submission fails.
              */
             core::gpu::GpuMeshHandle uploadMesh(const struct core::Mesh& mesh) override;
 
@@ -99,6 +137,115 @@ namespace projectv
             void createRenderFinishedSemaphores();
 
             void createFrameData();
+
+            /**
+             * @brief Allocates the primary command buffer that submitCopy()
+             *        records every upload into.
+             *
+             * Allocating it once and reusing it avoids allocating and freeing
+             * a command buffer on every upload. Must be called once, after
+             * graphicsCommandPool has been created and before the first
+             * submitCopy(); init() does this. The pool frees the command
+             * buffer when the pool is destroyed.
+             *
+             * @throws std::runtime_error if the command buffer allocation fails.
+             */
+            void createUploadCommandBuffer();
+         
+            /**
+             * @brief Runs a batch of buffer-to-buffer copies on the GPU and
+             *        waits for all of them to finish.
+             *
+             * Records every job, in order, into uploadCommandBuffer, submits
+             * it once to the graphics queue and blocks the CPU on a fence
+             * until it completes. A batch costs one submit and one wait, not
+             * one per copy. Meant for load time, not for every frame.
+             *
+             * The same command buffer is reused on every call. begin() resets
+             * it implicitly, and because this call waits for the GPU, it is
+             * never still pending when the next call starts. With only one
+             * upload command buffer, uploads cannot overlap. It comes from
+             * graphicsCommandPool, so call this on the thread that records
+             * frames: Vulkan allows a pool and its command buffers to be used
+             * by only one thread at a time.
+             *
+             * The command buffer and every job are checked before the fence
+             * is created, so a missing command buffer, an empty batch or a
+             * job with size 0 throws before anything is recorded or
+             * submitted.
+             *
+             * No barriers are recorded between jobs, so the GPU may run them
+             * in any order or at the same time. A job must not read or write
+             * a range that another job in the same batch writes.
+             *
+             * @pre createUploadCommandBuffer() has been called.
+             *
+             * @param bufferCopyJobs Copies to perform; must not be empty. The
+             *                       buffers they name only need to stay alive
+             *                       until this call returns.
+             *
+             * @throws std::runtime_error if uploadCommandBuffer has not been
+             *         created, if @p bufferCopyJobs is empty, if any job's
+             *         size is 0, or if recording, submitting or waiting for
+             *         the copies fails.
+             */
+            void submitCopy(std::span<const BufferCopyJob> bufferCopyJobs);
+            
+            /**
+             * @brief Uploads a mesh by writing it directly into buffers the
+             *        CPU can map, without a staging copy.
+             *
+             * Used by uploadMesh() when hasUnifiedMemory() reports that the
+             * CPU can write GPU memory directly. Creates a vertex and an index
+             * buffer in device-local, host-visible, host-coherent memory,
+             * copies the mesh data in through a mapping, and registers both
+             * buffers with the renderer resources.
+             *
+             * @param mesh Mesh whose vertices and indices are copied.
+             * @return Handle used to reference the uploaded mesh when drawing.
+             *
+             * @throws std::runtime_error if buffer creation, memory allocation
+             *         or mapping fails.
+             */
+            core::gpu::GpuMeshHandle unifiedMemoryUpload(const struct core::Mesh& mesh);
+            
+            /**
+             * @brief Uploads a mesh into device-local buffers through
+             *        temporary staging buffers.
+             *
+             * Used by uploadMesh() on GPUs whose device-local memory the CPU
+             * cannot write directly. Copies the mesh data into host-visible
+             * staging buffers, has the GPU copy them into device-local vertex
+             * and index buffers, and registers those with the renderer
+             * resources.
+             *
+             * Both copies go to the GPU in a single submitCopy() call, which
+             * blocks until they have finished, so the staging buffers can be
+             * released before returning. Meant for load time, not for every
+             * frame.
+             *
+             * @param mesh Mesh whose vertices and indices are copied.
+             * @return Handle used to reference the uploaded mesh when drawing.
+             *
+             * @throws std::runtime_error if buffer creation, memory allocation,
+             *         mapping or the copy submission fails.
+             */
+            core::gpu::GpuMeshHandle stagedUpload(const struct core::Mesh& mesh);
+
+            /**
+             * @brief Creates a buffer with bound device memory, used by one
+             *        queue family at a time (exclusive sharing).
+             * @param size   Buffer size, in bytes; must not be 0.
+             * @param usage  How the buffer will be used, e.g.
+             *               VK_BUFFER_USAGE_VERTEX_BUFFER_BIT.
+             * @param memory Memory properties the backing allocation must have.
+             * @return A VulkanBuffer owning the new buffer and its memory.
+             *
+             * @throws std::runtime_error if buffer creation or memory allocation
+             *         fails, or no memory type has all of @p memory.
+             */
+            [[nodiscard]]
+            rendererResources::VulkanBuffer createBuffer(VkDeviceSize size, VkBufferUsageFlags usage, VkMemoryPropertyFlags memory);
         private:
             std::unique_ptr<device::VulkanInstance> instance;
 
@@ -126,6 +273,16 @@ namespace projectv
             core::IWindow* window = nullptr;
 
             std::vector<sync::VulkanSemaphore> renderFinishedSemaphoreList;
+
+            /**
+             * @brief Primary command buffer reused by every submitCopy() call.
+             *
+             * Allocated once from graphicsCommandPool by
+             * createUploadCommandBuffer(); null until then. Declared after
+             * graphicsCommandPool, so this wrapper is destroyed first; the
+             * pool frees the command buffer itself.
+             */
+            std::unique_ptr<command::VulkanCommandBuffer> uploadCommandBuffer;
 
             uint32_t currentImageIndex = UINT32_MAX;
 

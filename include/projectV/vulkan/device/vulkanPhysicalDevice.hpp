@@ -60,6 +60,36 @@ namespace projectv
             VkFormat findSupportedFormat( const std::vector<VkFormat>& candidates, VkImageTiling tiling, VkFormatFeatureFlags features) const;
 
             /**
+             * @brief Checks whether the selected GPU shares its memory with the
+             *        CPU (unified memory architecture, UMA), so the CPU can
+             *        write straight into memory the GPU uses.
+             *
+             * Two things must hold:
+             *  - The GPU shares memory with the host. This is the case when
+             *    the device type is VK_PHYSICAL_DEVICE_TYPE_INTEGRATED_GPU, or
+             *    when every memory heap is VK_MEMORY_HEAP_DEVICE_LOCAL_BIT.
+             *    The Vulkan spec requires a UMA implementation to advertise
+             *    its shared heap as device-local, so a heap that is not
+             *    device-local is separate host-only memory.
+             *  - A memory type has VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
+             *    VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT and
+             *    VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, so it can be mapped and
+             *    written without a flush.
+             *
+             * A discrete GPU always returns false, even when Resizable BAR
+             * makes its VRAM host-visible: that memory is still dedicated VRAM
+             * reached over PCIe, not memory shared with the CPU.
+             *
+             * @pre select() has been called, so a physical device is selected.
+             *
+             * @return true if the GPU shares memory with the host and a
+             *         device-local, host-visible, host-coherent memory type
+             *         exists, false otherwise.
+             */
+            [[nodiscard]]
+            bool hasUnifiedMemory() const;
+        
+            /**
             * @brief 
             * 
             * @return 
