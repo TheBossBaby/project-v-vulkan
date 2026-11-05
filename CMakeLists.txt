@@ -51,6 +51,7 @@ add_library(projectv_vulkan STATIC
     include/projectV/vulkan/rendererResources/vulkanPipelineLayout.hpp
     include/projectV/vulkan/rendererResources/vulkanGraphicsPipeline.hpp
     include/projectV/vulkan/rendererResources/vulkanImage.hpp
+    include/projectV/vulkan/rendererResources/VulkanImageView.hpp
 
     include/projectV/vulkan/synchronization/vulkanFence.hpp
     include/projectV/vulkan/synchronization/vulkanSemaphore.hpp
@@ -67,7 +68,6 @@ add_library(projectv_vulkan STATIC
 
     include/projectV/vulkan/window/vulkanSurface.hpp
     include/projectV/vulkan/window/vulkanSwapchain.hpp
-    include/projectV/vulkan/window/VulkanImageView.hpp
     include/projectV/vulkan/window/windowSurface.hpp
     include/projectV/vulkan/window/glfwWindowSurface.hpp
 
@@ -98,6 +98,7 @@ add_library(projectv_vulkan STATIC
     src/rendererResources/vulkanPipelineLayout.cpp
     src/rendererResources/vulkanGraphicsPipeline.cpp
     src/rendererResources/vulkanImage.cpp
+    src/rendererResources/VulkanImageView.cpp
 
     src/synchronization/vulkanFence.cpp
     src/synchronization/vulkanSemaphore.cpp
@@ -109,7 +110,6 @@ add_library(projectv_vulkan STATIC
 
     src/window/vulkanSurface.cpp
     src/window/vulkanSwapchain.cpp
-    src/window/VulkanImageView.cpp
     src/window/windowSurface.cpp
     src/window/glfwWindowSurface.cpp
 )

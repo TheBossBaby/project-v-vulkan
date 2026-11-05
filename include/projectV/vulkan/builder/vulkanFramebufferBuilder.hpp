@@ -5,7 +5,7 @@
 #include <vector>
 
 #include <vulkan/rendererResources/vulkanFramebuffer.hpp>
-#include <vulkan/window/VulkanImageView.hpp>
+#include <vulkan/rendererResources/VulkanImageView.hpp>
 
 namespace projectv
 {
@@ -46,7 +46,7 @@ namespace projectv
                  * @param imageViews Ordered list of attachment image views.
                  * @return Reference to this builder, for chaining.
                  */
-                VulkanFramebufferBuilder& setAttachments(std::span<const window::VulkanImageView> imageViews);
+                VulkanFramebufferBuilder& setAttachments(std::span<const rendererResources::VulkanImageView> imageViews);
 
                 /**
                  * @brief Sets the framebuffer dimensions.

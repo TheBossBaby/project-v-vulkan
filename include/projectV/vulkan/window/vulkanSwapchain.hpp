@@ -3,7 +3,7 @@
 #include <vulkan/vulkan.h>
 
 #include <vulkan/device/vulkanPhysicalDevice.hpp>
-#include <vulkan/window/VulkanImageView.hpp>
+#include <vulkan/rendererResources/VulkanImageView.hpp>
 
 #include <span>
 #include <vector>
@@ -82,7 +82,7 @@ namespace projectv
              * @return Read-only span of swapchain image views.
              */
             [[nodiscard]]
-            std::span<const VulkanImageView> imageViews() const noexcept;
+            std::span<const rendererResources::VulkanImageView> imageViews() const noexcept;
 
             /**
              * @brief Creates the Vulkan swapchain.
@@ -248,7 +248,7 @@ namespace projectv
 
             std::vector<VkImage> m_images;
 
-            std::vector<VulkanImageView> m_imageViews;
+            std::vector<rendererResources::VulkanImageView> m_imageViews;
         };
     }
 }

@@ -354,7 +354,7 @@ namespace projectv
         auto depthImage = builder.build(
             logicalDevice->handle(), 
             physicalDevice->handle());
-        auto depthImageView = vulkan::window::VulkanImageView();
+        auto depthImageView = vulkan::rendererResources::VulkanImageView();
         
         depthImageView.create(
             logicalDevice->handle(), 
