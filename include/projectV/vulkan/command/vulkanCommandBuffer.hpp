@@ -75,7 +75,7 @@ namespace projectv::vulkan::command
          *
          * The command buffer must not already be in the recording state.
          */
-        void begin();
+        void begin(VkCommandBufferUsageFlags flags = 0);
 
         /**
          * @brief Ends command recording.
@@ -235,20 +235,20 @@ namespace projectv::vulkan::command
          * stay alive until the GPU has finished executing it.
          *
          * Must be recorded outside a render pass. @p source needs
-         * VK_BUFFER_USAGE_TRANSFER_SRC_BIT and @p desination needs
+         * VK_BUFFER_USAGE_TRANSFER_SRC_BIT and @p destination needs
          * VK_BUFFER_USAGE_TRANSFER_DST_BIT. Both ranges must fit inside
          * their buffers: srcOffset + size <= size of @p source, and
-         * dstOffset + size <= size of @p desination.
+         * dstOffset + size <= size of @p destination.
          *
          * @param source     Buffer to copy from.
-         * @param desination Buffer to copy to.
+         * @param destination Buffer to copy to.
          * @param size       Number of bytes to copy; must not be 0.
          * @param srcOffset  Byte offset into @p source where the copy starts (default: 0).
-         * @param dstOffset  Byte offset into @p desination where the data is written (default: 0).
+         * @param dstOffset  Byte offset into @p destination where the data is written (default: 0).
          *
          * @throws std::runtime_error if @p size is 0.
          */
-        void copyBuffer(VkBuffer source, VkBuffer desination, VkDeviceSize size, VkDeviceSize srcOffset = 0, VkDeviceSize dstOffset = 0);
+        void copyBuffer(VkBuffer source, VkBuffer destination, VkDeviceSize size, VkDeviceSize srcOffset = 0, VkDeviceSize dstOffset = 0);
 
         /**
          * @brief Returns the underlying Vulkan command buffer handle.
