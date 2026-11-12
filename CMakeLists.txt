@@ -34,6 +34,7 @@ add_library(projectv_vulkan STATIC
     include/projectV/vulkan/builder/vulkanImageBuilder.hpp
     include/projectV/vulkan/builder/vulkanDescriptorSetLayoutBuilder.hpp
     include/projectV/vulkan/builder/vulkanDescriptorSetLayoutBindingBuilder.hpp
+    include/projectV/vulkan/builder/vulkanDescriptorPoolBuilder.hpp
 
     include/projectV/vulkan/config/vulkanConfig.hpp
 
@@ -46,6 +47,7 @@ add_library(projectv_vulkan STATIC
     include/projectV/vulkan/device/vulkanPhysicalDevice.hpp
     include/projectV/vulkan/device/vulkanQueue.hpp
 
+    include/projectV/vulkan/descriptorSet/vulkanDescriptorPool.hpp
     include/projectV/vulkan/descriptorSet/vulkanDescriptorSetLayout.hpp
 
     include/projectV/vulkan/rendererResources/meshEntry.hpp
@@ -89,6 +91,7 @@ add_library(projectv_vulkan STATIC
     src/builder/vulkanImageBuilder.cpp
     src/builder/vulkanDescriptorSetLayoutBuilder.cpp
     src/builder/vulkanDescriptorSetLayoutBindingBuilder.cpp
+    src/builder/vulkanDescriptorPoolBuilder.cpp
 
     src/command/vulkanCommandBuffer.cpp
     src/command/vulkanCommandPool.cpp
@@ -98,6 +101,7 @@ add_library(projectv_vulkan STATIC
     src/device/vulkanPhysicalDevice.cpp
     src/device/vulkanQueue.cpp
 
+    src/descriptorSet/vulkanDescriptorPool.cpp
     src/descriptorSet/vulkanDescriptorSetLayout.cpp
 
     src/rendererResources/vulkanBuffer.cpp
