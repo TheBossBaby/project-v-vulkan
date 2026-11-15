@@ -42,6 +42,7 @@
 #include <vulkan/window/vulkanSwapchain.hpp>
 
 #include <array>
+#include <cassert>
 #include <utility>
 
 namespace projectv
@@ -468,7 +469,7 @@ namespace projectv
         {
             .viewProj = vpMatrix,
             .invViewProj = glm::inverse(vpMatrix),
-            .cameraPos = cameraPosition
+            .cameraPos = core::math::Vector4(cameraPosition, 1.0f)
         };
 
         // Safe to overwrite: beginFrame waited on this frame's fence, so the GPU is done reading it.
