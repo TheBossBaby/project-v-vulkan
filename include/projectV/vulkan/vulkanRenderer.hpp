@@ -112,7 +112,6 @@ namespace projectv
             void endFrame() override;
 
             void waitIdle() override;
-
         private:
             void createSwapchainRenderPass();
 
@@ -232,6 +231,15 @@ namespace projectv
              */
             core::gpu::GpuMeshHandle stagedUpload(const struct core::Mesh& mesh);
 
+            // Create Descriptor set pool and store in renderResoruces
+            void createDescriptorPool();
+
+            void createFrameSetLayout();
+
+            void createFrameUniformSets();
+
+            void writeCameraUniforms(const core::math::Matrix4& vpMatrix, const core::math::Vector3& cameraPosition);
+
             /**
              * @brief Creates a buffer with bound device memory, used by one
              *        queue family at a time (exclusive sharing).
@@ -291,8 +299,6 @@ namespace projectv
             bool isFrameRunning = false;
 
             std::vector<FrameData> frames;
-
-            core::math::Matrix4 viewProj;
         };
     }
 }

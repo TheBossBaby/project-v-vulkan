@@ -226,6 +226,12 @@ namespace projectv::vulkan::command
          */
         void pushConstants(const rendererResources::VulkanPipelineLayout &pipelineLayout, VkShaderStageFlags stageFlags, uint32_t offSet, uint32_t size, const void *pValues);
 
+        void bindDescriptorSets(const rendererResources::VulkanPipelineLayout &pipelineLayout, 
+            uint32_t firstSet, 
+            std::span<const VkDescriptorSet> descriptorSets, 
+            std::span<const uint32_t> dynamicOffsets = {}, 
+            VkPipelineBindPoint pipelineBindPoint = VK_PIPELINE_BIND_POINT_GRAPHICS);
+
         /**
          * @brief Records a copy of @p size bytes from one buffer to another.
          *

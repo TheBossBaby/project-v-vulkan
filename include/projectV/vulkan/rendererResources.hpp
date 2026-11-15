@@ -3,6 +3,9 @@
 #include <projectV/core/graphicsPipelineHandle.hpp>
 #include <projectV/core/gpu/gpuMeshHandle.hpp>
 
+#include <vulkan/descriptorSet/vulkanDescriptorSetLayout.hpp>
+#include <vulkan/descriptorSet/vulkanDescriptorPool.hpp>
+
 #include <vulkan/vulkanRenderPass.hpp>
 #include <vulkan/rendererResources/meshEntry.hpp>
 #include <vulkan/rendererResources/vulkanFramebuffer.hpp>
@@ -10,6 +13,7 @@
 #include <vulkan/rendererResources/vulkanGraphicsPipeline.hpp>
 #include <vulkan/rendererResources/vulkanImage.hpp>
 #include <vulkan/rendererResources/VulkanImageView.hpp>
+#include <vulkan/frameUniformSet.hpp>
 
 #include <vector>
 namespace projectv
@@ -99,6 +103,17 @@ namespace projectv
              */
             const rendererResources::VulkanImageView& getDepthImageView() const;
 
+            std::vector<FrameUniformSet>& frameUniformSets();
+
+            const std::vector<FrameUniformSet>& frameUniformSets() const;
+
+            descriptor::VulkanDescriptorPool& descriptorPool();
+
+            const descriptor::VulkanDescriptorPool& descriptorPool() const;
+
+            descriptor::VulkanDescriptorSetLayout& frameSetLayout();
+
+            const descriptor::VulkanDescriptorSetLayout& frameSetLayout() const;
         private:
             VulkanRenderPass m_renderPass;
 
@@ -114,6 +129,12 @@ namespace projectv
 
             /// Registered meshes, indexed by GpuMeshHandle::index.
             std::vector<MeshEntry> m_meshList;
+
+            descriptor::VulkanDescriptorPool m_descriptorPool;
+
+            descriptor::VulkanDescriptorSetLayout m_frameSetLayout;
+
+            std::vector<FrameUniformSet> m_frameUniformSets;
         };
     }
 }

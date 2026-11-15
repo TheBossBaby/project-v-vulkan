@@ -5,6 +5,8 @@
 #include <vulkan/util/vulkanCheck.hpp>
 #include <vulkan/vulkanRenderPass.hpp>
 
+#include <vulkan/descriptorSet/vulkanDescriptorSetLayout.hpp>
+
 #include <vulkan/rendererResources/vulkanFramebuffer.hpp>
 #include <vulkan/rendererResources/vulkanGraphicsPipeline.hpp>
 #include <vulkan/rendererResources/vulkanPipelineLayout.hpp>
@@ -134,6 +136,16 @@ namespace projectv
         void VulkanCommandBuffer::pushConstants(const rendererResources::VulkanPipelineLayout &pipelineLayout, VkShaderStageFlags stageFlags, uint32_t offSet, uint32_t size, const void *pValues)
         {
             vkCmdPushConstants(commandBuffer, pipelineLayout.handle(), stageFlags, offSet, size, pValues);
+        }
+
+        void VulkanCommandBuffer::bindDescriptorSets(
+            const rendererResources::VulkanPipelineLayout &pipelineLayout, 
+            uint32_t firstSet, 
+            std::span<const VkDescriptorSet> descriptorSets,
+            std::span<const uint32_t> dynamicOffsets,
+            VkPipelineBindPoint pipelineBindPoint)
+        {
+            vkCmdBindDescriptorSets(commandBuffer, pipelineBindPoint, pipelineLayout.handle(), firstSet, static_cast<uint32_t>(descriptorSets.size()), descriptorSets.data(), static_cast<uint32_t>(dynamicOffsets.size()), dynamicOffsets.data());
         }
 
         void VulkanCommandBuffer::copyBuffer(VkBuffer source, VkBuffer destination, VkDeviceSize size, VkDeviceSize srcOffset, VkDeviceSize dstOffset)

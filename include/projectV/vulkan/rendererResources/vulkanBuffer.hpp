@@ -89,11 +89,17 @@ namespace projectv
                  */
                 void write(const void* srcData, VkDeviceSize size);
 
+                void writeMapped(const void* srcData, VkDeviceSize size);
+
                 /**
                  * @brief Returns the size of the buffer.
                  * @return Buffer size in bytes, or 0 if no buffer is owned.
                  */
                 VkDeviceSize getDeviceSize() const;
+
+                void map(VkDeviceSize size = VK_WHOLE_SIZE, VkDeviceSize offset = 0);
+
+                void unmap();
             private:
                 /**
                  * @brief Destroys the owned buffer and resets internal state
@@ -112,6 +118,8 @@ namespace projectv
 
                 /// Size of the buffer, in bytes.
                 VkDeviceSize     m_deviceSize     = 0;
+
+                void* m_mappedData = nullptr; // Tracks the persistent pointer
             };
         }
     }
