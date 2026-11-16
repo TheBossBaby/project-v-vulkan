@@ -103,16 +103,63 @@ namespace projectv
              */
             const rendererResources::VulkanImageView& getDepthImageView() const;
 
+            /**
+             * @brief Returns the per-frame camera uniform buffers and their
+             *        descriptor sets.
+             * @return One FrameUniformSet per frame in flight, indexed by the
+             *         renderer's current frame; empty until the renderer
+             *         creates them.
+             */
             std::vector<FrameUniformSet>& frameUniformSets();
 
+            /**
+             * @brief Returns the per-frame camera uniform buffers and their
+             *        descriptor sets (read-only).
+             * @return One FrameUniformSet per frame in flight, indexed by the
+             *         renderer's current frame; empty until the renderer
+             *         creates them.
+             */
             const std::vector<FrameUniformSet>& frameUniformSets() const;
 
+            /**
+             * @brief Returns the descriptor pool the per-frame descriptor sets
+             *        are allocated from.
+             *
+             * Destroying or replacing the pool also frees every descriptor
+             * set in frameUniformSets().
+             *
+             * @return The pool, or an empty wrapper until the renderer
+             *         creates it.
+             */
             descriptor::VulkanDescriptorPool& descriptorPool();
 
+            /**
+             * @brief Returns the descriptor pool the per-frame descriptor sets
+             *        are allocated from (read-only).
+             * @return The pool, or an empty wrapper until the renderer
+             *         creates it.
+             */
             const descriptor::VulkanDescriptorPool& descriptorPool() const;
 
+            /**
+             * @brief Returns the layout of the per-frame descriptor set
+             *        (set config::FrameSetIndex), which holds the camera
+             *        uniforms.
+             *
+             * Every graphics pipeline layout includes it, so it must exist
+             * before any pipeline is created.
+             *
+             * @return The layout, or an empty wrapper until the renderer
+             *         creates it.
+             */
             descriptor::VulkanDescriptorSetLayout& frameSetLayout();
 
+            /**
+             * @brief Returns the layout of the per-frame descriptor set
+             *        (read-only).
+             * @return The layout, or an empty wrapper until the renderer
+             *         creates it.
+             */
             const descriptor::VulkanDescriptorSetLayout& frameSetLayout() const;
         private:
             VulkanRenderPass m_renderPass;
