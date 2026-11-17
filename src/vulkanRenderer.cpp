@@ -13,12 +13,17 @@
 #include <vulkan/builder/vulkanPipelineLayoutBuilder.hpp>
 #include <vulkan/builder/vulkanGraphicsPipelineBuilder.hpp>
 #include <vulkan/builder/vulkanImageBuilder.hpp>
+#include <vulkan/builder/vulkanDescriptorPoolBuilder.hpp>
+#include <vulkan/builder/vulkanDescriptorSetLayoutBuilder.hpp>
+#include <vulkan/builder/vulkanDescriptorSetLayoutBindingBuilder.hpp>
 
 #include <vulkan/config/vulkanConfig.hpp>
 #include <vulkan/vulkanFactory.hpp>
 #include <vulkan/vulkanRenderer.hpp>
 #include <vulkan/rendererResources.hpp>
 #include <vulkan/frameData.hpp>
+#include <vulkan/cameraUniforms.hpp>
+
 
 #include <vulkan/command/vulkanCommandPool.hpp>
 
@@ -37,6 +42,7 @@
 #include <vulkan/window/vulkanSwapchain.hpp>
 
 #include <array>
+#include <cassert>
 #include <utility>
 
 namespace projectv
@@ -89,6 +95,12 @@ namespace projectv
         
         createRenderFinishedSemaphores();
         createDepthBuffer();
+
+        createFrameSetLayout();
+        createDescriptorPool();
+
+        createFrameUniformSets();
+
         createSwapchainRenderPass();
         createSwapchainFramebuffers();
 
@@ -108,8 +120,6 @@ namespace projectv
 
     void vulkan::vulkanRenderer::beginFrame(const core::RenderView& renderView)
     {
-        viewProj = renderView.viewProj;
-
         std::array<VkClearValue, 2> clearValues{};
         clearValues[0].color.float32[0] = renderView.clearColor.x;
         clearValues[0].color.float32[1] = renderView.clearColor.y;
@@ -153,6 +163,8 @@ namespace projectv
             {0, 0},
             swapchain->extent());
         
+        writeCameraUniforms(renderView.viewProj, renderView.cameraPosition);
+
         isFrameRunning = true;
     }
 
@@ -167,6 +179,9 @@ namespace projectv
         VkPipeline previousGraphicsPipeline = VK_NULL_HANDLE;
         FrameData& frame = frames[currentFrame];
 
+        assert(currentFrame < renderResources->frameUniformSets().size());
+        const VkDescriptorSet& frameDescriptorSet = renderResources->frameUniformSets()[currentFrame].descriptorSet;
+
         for (size_t i = 0; i < items.size(); i++)
         {
             auto graphicsPipeline = renderResources->graphicsPipeline(items[i].graphicsPipelineHandle);
@@ -179,18 +194,23 @@ namespace projectv
             {
                 previousGraphicsPipeline = graphicsPipeline->pipeline.handle();
                 frame.commandBuffer.bindGraphicsPipeline(graphicsPipeline->pipeline);
+
+                frame.commandBuffer.bindDescriptorSets(
+                    graphicsPipeline->layout,
+                    config::FrameSetIndex,
+                    { &frameDescriptorSet, 1 }
+                );
             }
             
             frame.commandBuffer.bindVertexBuffers(0, { &meshEntry->vertexBuffer });
             frame.commandBuffer.bindIndexBuffer(meshEntry->indexBuffer, VK_INDEX_TYPE_UINT32);
 
             auto vertexCount = meshEntry->vertexBuffer.getDeviceSize() / sizeof(core::Vertex);
-
-            core::math::Matrix4 mvp = viewProj * items[i].modelMatrix;
+            
             frame.commandBuffer.pushConstants(graphicsPipeline->layout, 
                 VK_SHADER_STAGE_VERTEX_BIT, 
                 0, sizeof(core::math::Matrix4), 
-                &mvp);
+                &items[i].modelMatrix);
 
             if(meshEntry->indexBuffer.handle() != VK_NULL_HANDLE)
             {
@@ -227,6 +247,12 @@ namespace projectv
             return {};
         }
 
+        if(!renderResources->frameSetLayout())
+        {
+            engine::LogError("vulkanRenderer::createGraphicsPipeline, frame descriptor set layout is invalid");
+            return {};
+        }
+
         rendererResources::VulkanShaderModule vertexModule =
             builder::VulkanShaderModuleBuilder().setCode(description.vertexShaderCode).build(logicalDevice->handle());
 
@@ -235,7 +261,8 @@ namespace projectv
 
         rendererResources::VulkanPipelineLayout layout =
             builder::VulkanPipelineLayoutBuilder()
-            .addPushConstantRange(VK_SHADER_STAGE_VERTEX_BIT, 0, sizeof(core::math::Matrix4)) // Make room for modelViewProjection Matrix in push constant
+            .addDescriptorSetLayout(renderResources->frameSetLayout().handle())
+            .addPushConstantRange(VK_SHADER_STAGE_VERTEX_BIT, 0, sizeof(core::math::Matrix4)) // Make room for model Matrix in push constant
             .build(logicalDevice->handle());
 
         const VkVertexInputBindingDescription bindingDescription {0, sizeof(core::Vertex), VK_VERTEX_INPUT_RATE_VERTEX};
@@ -360,6 +387,93 @@ namespace projectv
             std::move(gpuIndexBuffer),
             static_cast<std::uint32_t>(mesh.indices.size())
         });
+    }
+
+    void vulkan::vulkanRenderer::createDescriptorPool()
+    {
+        builder::VulkanDescriptorPoolBuilder builder;
+        builder.setMaxSets(config::MaxFramesInFlight)
+        .addPoolSize({VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, static_cast<uint32_t>(config::MaxFramesInFlight)});
+
+        renderResources->descriptorPool() = builder.build(logicalDevice->handle());
+    }
+
+    void vulkan::vulkanRenderer::createFrameSetLayout()
+    {
+        builder::VulkanDescriptorSetLayoutBindingBuilder bindingBuilder;
+        bindingBuilder.setBinding(config::CameraBindingIndex)
+        .setDescriptorCount(1)
+        .setDescriptorType(VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER)
+        .setStageFlags(VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT);
+
+        VkDescriptorSetLayoutBinding binding = bindingBuilder.build();
+
+        builder::VulkanDescriptorSetLayoutBuilder builder;
+        builder.addLayoutBinding(binding);
+
+        renderResources->frameSetLayout() = builder.build(logicalDevice->handle());
+    }
+
+    void vulkan::vulkanRenderer::createFrameUniformSets()
+    {
+        if(!renderResources->frameSetLayout())
+        {
+            engine::LogError("vulkanRenderer::createFrameUniformSets, Required descriptor set layout is NULL unable to create desciprot set");
+            throw std::runtime_error("vulkanRenderer::createFrameUniformSets, Required descriptor set layout is NULL unable to create desciprot set");
+        }
+
+        // One descriptor set per frame in flight. A set bound by a pending command buffer
+        // must not be updated, so frames can't share a set.
+        std::array<VkDescriptorSetLayout, config::MaxFramesInFlight> layouts;
+        layouts.fill(renderResources->frameSetLayout().handle());
+
+        auto descriptorSets = renderResources->descriptorPool().allocate(layouts);
+
+        for (size_t i = 0; i < config::MaxFramesInFlight; i++)
+        {
+            rendererResources::VulkanBuffer cameraBuffer = createBuffer(
+                sizeof(CameraUniforms),
+                VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT,
+                VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT
+            );
+            cameraBuffer.map();
+
+            // The buffer handle never changes, so the descriptor is written once here
+            // and only the buffer contents are updated per frame.
+            VkDescriptorBufferInfo bufferInfo{};
+            bufferInfo.buffer = cameraBuffer.handle();
+            bufferInfo.offset = 0;
+            bufferInfo.range  = sizeof(CameraUniforms);
+
+            VkWriteDescriptorSet descriptorWrite{};
+            descriptorWrite.sType           = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+            descriptorWrite.dstSet          = descriptorSets[i];
+            descriptorWrite.dstBinding      = config::CameraBindingIndex;
+            descriptorWrite.dstArrayElement = 0;
+            descriptorWrite.descriptorType  = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+            descriptorWrite.descriptorCount = 1;
+            descriptorWrite.pBufferInfo     = &bufferInfo;
+
+            vkUpdateDescriptorSets(logicalDevice->handle(), 1, &descriptorWrite, 0, nullptr);
+
+            FrameUniformSet frameSet;
+            frameSet.descriptorSet = descriptorSets[i];
+            frameSet.uniformBuffer = std::move(cameraBuffer);
+            renderResources->frameUniformSets().push_back(std::move(frameSet));
+        }
+    }
+
+    void vulkan::vulkanRenderer::writeCameraUniforms(const core::math::Matrix4& vpMatrix, const core::math::Vector3& cameraPosition)
+    {
+        const CameraUniforms cameraUniforms
+        {
+            .viewProj = vpMatrix,
+            .invViewProj = glm::inverse(vpMatrix),
+            .cameraPos = core::math::Vector4(cameraPosition, 1.0f)
+        };
+
+        // Safe to overwrite: beginFrame waited on this frame's fence, so the GPU is done reading it.
+        renderResources->frameUniformSets()[currentFrame].uniformBuffer.writeMapped(&cameraUniforms, sizeof(CameraUniforms));
     }
 
     vulkan::rendererResources::VulkanBuffer vulkan::vulkanRenderer::createBuffer(VkDeviceSize size, VkBufferUsageFlags usage, VkMemoryPropertyFlags memory)

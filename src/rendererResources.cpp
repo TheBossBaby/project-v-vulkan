@@ -81,5 +81,35 @@ namespace projectv
         {
             return m_depthImageView;
         }
+
+        std::vector<FrameUniformSet> &RendererResources::frameUniformSets()
+        {
+            return m_frameUniformSets;
+        }
+
+        const std::vector<FrameUniformSet> &RendererResources::frameUniformSets() const
+        {
+            return m_frameUniformSets;
+        }
+
+        descriptor::VulkanDescriptorPool& RendererResources::descriptorPool()
+        {
+            return m_descriptorPool;
+        }
+
+        const descriptor::VulkanDescriptorPool &RendererResources::descriptorPool() const
+        {
+            return m_descriptorPool;
+        }
+
+        descriptor::VulkanDescriptorSetLayout& RendererResources::frameSetLayout()
+        {
+            return m_frameSetLayout;
+        }
+
+        const descriptor::VulkanDescriptorSetLayout &RendererResources::frameSetLayout() const
+        {
+            return m_frameSetLayout;
+        }
     }
 }

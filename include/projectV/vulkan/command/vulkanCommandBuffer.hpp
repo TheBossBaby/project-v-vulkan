@@ -73,7 +73,17 @@ namespace projectv::vulkan::command
         /**
          * @brief Begins recording commands into this command buffer.
          *
-         * The command buffer must not already be in the recording state.
+         * The command buffer must not be recording or pending execution on
+         * the GPU. Its pool is created with
+         * VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT, so beginning also
+         * discards any commands recorded earlier.
+         *
+         * @param flags Usage flags for this recording, e.g.
+         *              VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT when the
+         *              buffer is submitted once before being recorded again.
+         *              Defaults to 0 (no special behaviour).
+         *
+         * @throws std::runtime_error if vkBeginCommandBuffer fails.
          */
         void begin(VkCommandBufferUsageFlags flags = 0);
 
@@ -225,6 +235,36 @@ namespace projectv::vulkan::command
          *                       during the call.
          */
         void pushConstants(const rendererResources::VulkanPipelineLayout &pipelineLayout, VkShaderStageFlags stageFlags, uint32_t offSet, uint32_t size, const void *pValues);
+
+        /**
+         * @brief Binds descriptor sets to consecutive set indices for
+         *        subsequent draws.
+         *
+         * descriptorSets[i] is bound to set @p firstSet + i, and stays bound
+         * until another bind replaces it or recording ends. Each set must
+         * have been allocated with the layout at the same set index of
+         * @p pipelineLayout, and must not be updated while this command
+         * buffer is pending execution.
+         *
+         * @param pipelineLayout    Layout the sets are bound against; must be
+         *                          compatible with the pipelines used by the
+         *                          following draws.
+         * @param firstSet          Set index of the first descriptor set
+         *                          (shader: layout(set = N)).
+         * @param descriptorSets    Sets to bind, in set-index order. Copied
+         *                          during the call.
+         * @param dynamicOffsets    One offset per dynamic uniform or storage
+         *                          buffer descriptor in @p descriptorSets, in
+         *                          set and binding order. Empty (default) when
+         *                          there are none.
+         * @param pipelineBindPoint Pipeline type that uses the sets
+         *                          (default: VK_PIPELINE_BIND_POINT_GRAPHICS).
+         */
+        void bindDescriptorSets(const rendererResources::VulkanPipelineLayout &pipelineLayout,
+            uint32_t firstSet, 
+            std::span<const VkDescriptorSet> descriptorSets, 
+            std::span<const uint32_t> dynamicOffsets = {}, 
+            VkPipelineBindPoint pipelineBindPoint = VK_PIPELINE_BIND_POINT_GRAPHICS);
 
         /**
          * @brief Records a copy of @p size bytes from one buffer to another.

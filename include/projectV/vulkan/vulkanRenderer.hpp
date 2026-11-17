@@ -80,12 +80,65 @@ namespace projectv
 
             ~vulkanRenderer();
 
+            /**
+             * @brief Creates the Vulkan instance, devices, swapchain and every
+             *        resource needed to render frames and upload meshes.
+             *
+             * Order matters: the per-frame descriptor set layout, descriptor
+             * pool and camera uniform sets are created before any graphics
+             * pipeline can be, and the upload command buffer after the
+             * graphics command pool.
+             *
+             * @param config   Renderer settings. Currently unused: the
+             *                 swapchain size is read from @p inWindow.
+             * @param inWindow Window to render into; must outlive the renderer.
+             * @return true once initialization has finished. Failures are
+             *         reported by throwing, not by returning false.
+             *
+             * @throws std::runtime_error if creating any Vulkan object fails.
+             */
             bool init(const core::RendererConfig& config, core::IWindow& inWindow) override;
 
             void resize(std::uint32_t width, std::uint32_t height) override;
 
+            /**
+             * @brief Starts recording a frame in the current frame-in-flight
+             *        slot.
+             *
+             * Waits on the slot's fence, acquires the next swapchain image,
+             * begins the slot's command buffer and the swapchain render pass
+             * (clearing color to @c renderView.clearColor and depth to 1.0),
+             * sets the viewport and scissor to the swapchain extent, and
+             * writes the camera uniforms for the slot. The fence wait is what
+             * makes overwriting the slot's uniform buffer safe.
+             *
+             * If the swapchain is out of date, logs a warning and returns
+             * without starting a frame; draw() and endFrame() then do nothing.
+             *
+             * @param renderView View-projection matrix, camera position and
+             *                   clear color for this frame.
+             *
+             * @throws std::runtime_error if a Vulkan call fails.
+             */
             void beginFrame(const core::RenderView& renderView) override;
 
+            /**
+             * @brief Records draw commands for a list of renderables into the
+             *        current frame.
+             *
+             * Items whose pipeline or mesh handle is invalid are skipped.
+             * Whenever the pipeline changes, it is bound together with the
+             * frame's camera descriptor set at config::FrameSetIndex. Each
+             * item's model matrix is passed to the vertex shader as a push
+             * constant at offset 0. Meshes with an index buffer are drawn
+             * indexed, others non-indexed.
+             *
+             * Items are drawn in the given order, so sorting them by pipeline
+             * reduces rebinds. Does nothing unless beginFrame() started a
+             * frame.
+             *
+             * @param items Renderables to draw this frame.
+             */
             void draw(const std::vector<core::Renderable>& items) override;
 
             /**
@@ -107,12 +160,37 @@ namespace projectv
              */
             core::gpu::GpuMeshHandle uploadMesh(const struct core::Mesh& mesh) override;
 
+            /**
+             * @brief Builds a graphics pipeline from SPIR-V shaders and
+             *        registers it with the renderer resources.
+             *
+             * The pipeline layout has the per-frame descriptor set layout as
+             * set 0 (config::FrameSetIndex, camera uniforms) and a
+             * vertex-stage push constant range of sizeof(core::math::Matrix4)
+             * bytes at offset 0 for the model matrix. Vertex input is one
+             * binding of core::Vertex with position, normal, color and uv at
+             * locations 0 to 3. The pipeline targets the swapchain render pass.
+             *
+             * @param description Vertex and fragment shader SPIR-V bytecode.
+             * @return Handle to the new pipeline, or an invalid handle (and an
+             *         error is logged) if either shader is empty or the frame
+             *         descriptor set layout has not been created.
+             *
+             * @throws std::runtime_error if creating the shader modules, the
+             *         pipeline layout or the pipeline fails.
+             */
             core::GraphicsPipelineHandle createGraphicsPipeline(const core::GraphicsPipelineDescription& description) override;
 
             void endFrame() override;
 
+            /**
+             * @brief Blocks until the GPU has finished all submitted work.
+             *
+             * Does nothing if the logical device has not been created.
+             *
+             * @throws std::runtime_error if vkDeviceWaitIdle fails.
+             */
             void waitIdle() override;
-
         private:
             void createSwapchainRenderPass();
 
@@ -233,6 +311,73 @@ namespace projectv
             core::gpu::GpuMeshHandle stagedUpload(const struct core::Mesh& mesh);
 
             /**
+             * @brief Creates the descriptor pool for the per-frame descriptor
+             *        sets and stores it in the renderer resources.
+             *
+             * Sized for exactly config::MaxFramesInFlight sets with one
+             * uniform buffer descriptor each, so it has no room for any
+             * other sets. Must be called before createFrameUniformSets().
+             *
+             * @throws std::runtime_error if descriptor pool creation fails.
+             */
+            void createDescriptorPool();
+
+            /**
+             * @brief Creates the layout of the per-frame descriptor set and
+             *        stores it in the renderer resources.
+             *
+             * The layout has a single uniform buffer binding at
+             * config::CameraBindingIndex, holding CameraUniforms and visible
+             * to the vertex and fragment stages. Must be called before
+             * createFrameUniformSets() and before any createGraphicsPipeline().
+             *
+             * @throws std::runtime_error if descriptor set layout creation fails.
+             */
+            void createFrameSetLayout();
+
+            /**
+             * @brief Creates one camera uniform buffer and descriptor set per
+             *        frame in flight and stores them in the renderer resources.
+             *
+             * Each frame gets its own set because a set used by a command
+             * buffer that is still pending must not be updated. Each buffer is
+             * host-visible and host-coherent, sized for CameraUniforms, and
+             * stays mapped for the renderer's lifetime. The descriptor is
+             * written once here because the buffer never changes;
+             * writeCameraUniforms() only updates the buffer contents.
+             *
+             * Call once: the pool only has room for one set per frame in
+             * flight.
+             *
+             * @pre createFrameSetLayout() and createDescriptorPool() have been
+             *      called.
+             *
+             * @throws std::runtime_error if the frame set layout has not been
+             *         created, or if allocating the sets or creating or
+             *         mapping a buffer fails.
+             */
+            void createFrameUniformSets();
+
+            /**
+             * @brief Writes the camera data for this frame into the current
+             *        frame slot's uniform buffer.
+             *
+             * Fills CameraUniforms with @p vpMatrix, its inverse and
+             * @p cameraPosition (w = 1), and copies it through the buffer's
+             * persistent mapping. Only safe once the slot's fence has been
+             * waited on, so the GPU is no longer reading the buffer;
+             * beginFrame() calls it after that wait.
+             *
+             * @pre createFrameUniformSets() has been called.
+             *
+             * @param vpMatrix       Combined view-projection matrix.
+             * @param cameraPosition Camera position in world space.
+             *
+             * @throws std::runtime_error if the uniform buffer is not mapped.
+             */
+            void writeCameraUniforms(const core::math::Matrix4& vpMatrix, const core::math::Vector3& cameraPosition);
+
+            /**
              * @brief Creates a buffer with bound device memory, used by one
              *        queue family at a time (exclusive sharing).
              * @param size   Buffer size, in bytes; must not be 0.
@@ -291,8 +436,6 @@ namespace projectv
             bool isFrameRunning = false;
 
             std::vector<FrameData> frames;
-
-            core::math::Matrix4 viewProj;
         };
     }
 }

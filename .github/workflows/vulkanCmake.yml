@@ -24,6 +24,7 @@ jobs:
           choco install vulkan-sdk --yes
           $sdk = Get-ChildItem 'C:\VulkanSDK' | Sort-Object Name -Descending | Select-Object -First 1
           "VULKAN_SDK=C:\VulkanSDK\$($sdk.Name)" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
+          "VULKAN_SDK_VERSION=$($sdk.Name)" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
           "C:\VulkanSDK\$($sdk.Name)\Bin" | Out-File -FilePath $env:GITHUB_PATH -Encoding utf8 -Append
           
       - name: Checkout repository (with submodules)
@@ -31,14 +32,16 @@ jobs:
         with:
           submodules: recursive
 
+      # The Vulkan SDK version is part of the key: CMakeCache.txt stores absolute
+      # SDK paths, so a build dir configured against another SDK version is stale.
       - name: Cache CMake build
         uses: actions/cache@v4
         with:
           path: build
-          key: cmake-${{ runner.os }}-${{ env.BUILD_TYPE }}-${{ github.ref_name }}-${{ hashFiles('CMakeLists.txt', '**/CMakeLists.txt') }}
+          key: cmake-${{ runner.os }}-${{ env.BUILD_TYPE }}-vk${{ env.VULKAN_SDK_VERSION }}-${{ github.ref_name }}-${{ hashFiles('CMakeLists.txt', '**/CMakeLists.txt') }}
           restore-keys: |
-            cmake-${{ runner.os }}-${{ env.BUILD_TYPE }}-${{ github.ref_name }}-
-            cmake-${{ runner.os }}-${{ env.BUILD_TYPE }}-
+            cmake-${{ runner.os }}-${{ env.BUILD_TYPE }}-vk${{ env.VULKAN_SDK_VERSION }}-${{ github.ref_name }}-
+            cmake-${{ runner.os }}-${{ env.BUILD_TYPE }}-vk${{ env.VULKAN_SDK_VERSION }}-
 
       - name: Configure CMake
         run: cmake -S . -B build -DCMAKE_BUILD_TYPE=${{ env.BUILD_TYPE }}

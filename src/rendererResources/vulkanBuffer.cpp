@@ -22,6 +22,7 @@ namespace projectv
 
             VulkanBuffer::~VulkanBuffer()
             {
+                unmap();
                 destroy();
             }
 
@@ -30,28 +31,34 @@ namespace projectv
                 , m_buffer(other.m_buffer)
                 , m_deviceMemory(other.m_deviceMemory)
                 , m_deviceSize(other.m_deviceSize)
+                , m_mappedData(other.m_mappedData)
             {
                 other.m_logicalDevice  = VK_NULL_HANDLE;
                 other.m_buffer         = VK_NULL_HANDLE;
                 other.m_deviceMemory   = VK_NULL_HANDLE;
                 other.m_deviceSize     = 0;
+                other.m_mappedData     = nullptr;
             }
 
             VulkanBuffer &VulkanBuffer::operator=(VulkanBuffer &&other) noexcept
             {
                 if (this != &other)
                 {
+                    unmap();
                     destroy();
 
                     m_logicalDevice  = other.m_logicalDevice;
                     m_buffer         = other.m_buffer;
                     m_deviceMemory   = other.m_deviceMemory;
                     m_deviceSize     = other.m_deviceSize;
+                    m_mappedData     = other.m_mappedData;
+
 
                     other.m_logicalDevice  = VK_NULL_HANDLE;
                     other.m_buffer         = VK_NULL_HANDLE;
                     other.m_deviceMemory   = VK_NULL_HANDLE;
                     other.m_deviceSize     = 0;
+                    other.m_mappedData     = nullptr;
                 }
                 return *this;
             }
@@ -73,24 +80,64 @@ namespace projectv
                     throw std::runtime_error(std::format(
                         "VulkanBuffer::write, write size {} exceeds buffer size {}", size, m_deviceSize));
                 }
+                const bool wasMapped = m_mappedData != nullptr;
 
                 if (size == 0)
                 {
                     return;
                 }
 
-                void* data;
-                vkCheck(
-                    vkMapMemory(m_logicalDevice, m_deviceMemory, 0, size, 0, &data),
-                    "VulkanBuffer::write, Mapping Failed");
+                map(size, 0);
 
-                std::memcpy(data, srcData, static_cast<size_t>(size));
-                vkUnmapMemory(m_logicalDevice, m_deviceMemory);
+                std::memcpy(m_mappedData, srcData, static_cast<size_t>(size));
+
+                if (!wasMapped) unmap();
+            }
+
+            void VulkanBuffer::writeMapped(const void *srcData, VkDeviceSize size)
+            {
+                if (m_mappedData == nullptr)
+                {
+                    throw std::runtime_error("VulkanBuffer::writeMapped, buffer is not mapped; call map() first");
+                }
+
+                if (size > m_deviceSize)
+                {
+                    throw std::runtime_error(std::format(
+                        "VulkanBuffer::writeMapped, writeMapped size {} exceeds buffer size {}", size, m_deviceSize));
+                }
+
+                if (size == 0)
+                {
+                    return;
+                }
+                std::memcpy(m_mappedData, srcData, static_cast<size_t>(size));
             }
 
             VkDeviceSize VulkanBuffer::getDeviceSize() const
             {
                 return m_deviceSize;
+            }
+
+            void VulkanBuffer::map(VkDeviceSize size, VkDeviceSize offset)
+            {
+                if (m_mappedData != nullptr)
+                {
+                    return;
+                }
+
+                vkCheck(
+                    vkMapMemory(m_logicalDevice, m_deviceMemory, offset, size, 0, &m_mappedData),
+                    "VulkanBuffer::map, Mapping Failed");
+            }
+
+            void VulkanBuffer::unmap()
+            {
+                if (m_mappedData != nullptr)
+                {
+                    vkUnmapMemory(m_logicalDevice, m_deviceMemory);
+                    m_mappedData = nullptr;
+                }
             }
 
             void VulkanBuffer::destroy() noexcept

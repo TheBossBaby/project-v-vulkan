@@ -24,6 +24,8 @@ add_library(projectv_vulkan STATIC
     include/projectV/vulkan/vulkanRenderPass.hpp
     include/projectV/vulkan/rendererResources.hpp
     include/projectV/vulkan/frameData.hpp
+    include/projectV/vulkan/frameUniformSet.hpp
+    include/projectV/vulkan/cameraUniforms.hpp
 
     include/projectV/vulkan/builder/vulkanBufferBuilder.hpp
     include/projectV/vulkan/builder/vulkanRenderPassBuilder.hpp
@@ -32,6 +34,9 @@ add_library(projectv_vulkan STATIC
     include/projectV/vulkan/builder/vulkanPipelineLayoutBuilder.hpp
     include/projectV/vulkan/builder/vulkanGraphicsPipelineBuilder.hpp
     include/projectV/vulkan/builder/vulkanImageBuilder.hpp
+    include/projectV/vulkan/builder/vulkanDescriptorSetLayoutBuilder.hpp
+    include/projectV/vulkan/builder/vulkanDescriptorSetLayoutBindingBuilder.hpp
+    include/projectV/vulkan/builder/vulkanDescriptorPoolBuilder.hpp
 
     include/projectV/vulkan/config/vulkanConfig.hpp
 
@@ -43,6 +48,9 @@ add_library(projectv_vulkan STATIC
     include/projectV/vulkan/device/vulkanInstance.hpp
     include/projectV/vulkan/device/vulkanPhysicalDevice.hpp
     include/projectV/vulkan/device/vulkanQueue.hpp
+
+    include/projectV/vulkan/descriptorSet/vulkanDescriptorPool.hpp
+    include/projectV/vulkan/descriptorSet/vulkanDescriptorSetLayout.hpp
 
     include/projectV/vulkan/rendererResources/meshEntry.hpp
     include/projectV/vulkan/rendererResources/vulkanBuffer.hpp
@@ -83,6 +91,9 @@ add_library(projectv_vulkan STATIC
     src/builder/vulkanPipelineLayoutBuilder.cpp
     src/builder/vulkanGraphicsPipelineBuilder.cpp
     src/builder/vulkanImageBuilder.cpp
+    src/builder/vulkanDescriptorSetLayoutBuilder.cpp
+    src/builder/vulkanDescriptorSetLayoutBindingBuilder.cpp
+    src/builder/vulkanDescriptorPoolBuilder.cpp
 
     src/command/vulkanCommandBuffer.cpp
     src/command/vulkanCommandPool.cpp
@@ -91,6 +102,9 @@ add_library(projectv_vulkan STATIC
     src/device/vulkanInstance.cpp
     src/device/vulkanPhysicalDevice.cpp
     src/device/vulkanQueue.cpp
+
+    src/descriptorSet/vulkanDescriptorPool.cpp
+    src/descriptorSet/vulkanDescriptorSetLayout.cpp
 
     src/rendererResources/vulkanBuffer.cpp
     src/rendererResources/vulkanFramebuffer.cpp

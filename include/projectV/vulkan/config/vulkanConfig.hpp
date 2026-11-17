@@ -73,5 +73,16 @@ namespace projectv
         * 
         */
         constexpr std::uint32_t MaxFramesInFlight = 2;
+
+        /**
+        * @brief Descriptor set index of the per-frame set (shader: layout(set = N)).
+        * Must match the order the set layout is added to the pipeline layout.
+        */
+        constexpr uint32_t FrameSetIndex = 0;
+
+        /**
+        * @brief Binding index of the camera uniforms within the per-frame set (shader: layout(binding = N)).
+        */
+        constexpr uint32_t CameraBindingIndex = 0;
     }
 }
