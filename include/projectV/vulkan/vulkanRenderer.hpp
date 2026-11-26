@@ -323,13 +323,16 @@ namespace projectv
              * @brief Creates the descriptor pool for the per-frame descriptor
              *        sets and stores it in the renderer resources.
              *
-             * Sized for exactly config::MaxFramesInFlight sets with one
-             * uniform buffer descriptor each, so it has no room for any
-             * other sets. Must be called before createFrameUniformSets().
+             * Holds one uniform buffer descriptor and config::MaxMainCubeMap
+             * combined image sampler descriptors for each of the
+             * config::MaxFramesInFlight per-frame sets. Must be called before
+             * createFrameUniformSets().
              *
              * @throws std::runtime_error if descriptor pool creation fails.
              */
             void createDescriptorPool();
+
+            VkDescriptorSetLayoutBinding createCubeMapSamplerBinding();
 
             /**
              * @brief Creates the layout of the per-frame descriptor set and
@@ -400,6 +403,34 @@ namespace projectv
              */
             [[nodiscard]]
             rendererResources::VulkanBuffer createBuffer(VkDeviceSize size, VkBufferUsageFlags usage, VkMemoryPropertyFlags memory);
+
+            void writeUniformDescSet(VkWriteDescriptorSet& descWrite, VkDescriptorSet descSet, VkDescriptorBufferInfo& bufferInfo);
+
+            void writeSamplerDescSet(VkWriteDescriptorSet& descWrite, VkDescriptorSet descSet, VkDescriptorImageInfo& imgInfo);
+
+            void createCubeSampler();
+
+            /**
+             * @brief Points the cube map binding (config::CubeMapBindingIndex)
+             *        of every per-frame descriptor set at a texture.
+             *
+             * Writes the texture's image view together with the cube map
+             * sampler as a combined image sampler, in
+             * SHADER_READ_ONLY_OPTIMAL layout.
+             *
+             * No per-frame set may be in use by a pending command buffer, so
+             * call this before rendering starts or after the device is idle.
+             *
+             * @pre createFrameUniformSets() and createCubeSampler() have been
+             *      called.
+             *
+             * @param cubeMapHandle Handle returned by uploadTexture() for a
+             *                      cube map texture.
+             *
+             * @throws std::runtime_error if @p cubeMapHandle is unknown, the
+             *         sampler is missing, or no frame sets exist yet.
+             */
+            void updateCubeMapDescriptorSets(core::gpu::GpuTextureHandle cubeMapHandle);
         private:
             std::unique_ptr<device::VulkanInstance> instance;
 

@@ -84,5 +84,9 @@ namespace projectv
         * @brief Binding index of the camera uniforms within the per-frame set (shader: layout(binding = N)).
         */
         constexpr uint32_t CameraBindingIndex = 0;
+
+        constexpr uint32_t CubeMapBindingIndex = 1;
+
+        constexpr uint32_t MaxMainCubeMap = 1;
     }
 }

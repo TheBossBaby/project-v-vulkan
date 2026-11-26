@@ -18,6 +18,7 @@
 #include <vulkan/builder/vulkanDescriptorPoolBuilder.hpp>
 #include <vulkan/builder/vulkanDescriptorSetLayoutBuilder.hpp>
 #include <vulkan/builder/vulkanDescriptorSetLayoutBindingBuilder.hpp>
+#include <vulkan/builder/vulkanSamplerBuilder.hpp>
 
 #include <vulkan/config/vulkanConfig.hpp>
 #include <vulkan/vulkanFactory.hpp>
@@ -115,6 +116,8 @@ namespace projectv
         createFrameData();
  
         createUploadCommandBuffer();
+
+        createCubeSampler();
 
         return true;
     }
@@ -509,10 +512,25 @@ namespace projectv
     void vulkan::vulkanRenderer::createDescriptorPool()
     {
         builder::VulkanDescriptorPoolBuilder builder;
-        builder.setMaxSets(config::MaxFramesInFlight)
-        .addPoolSize({VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, static_cast<uint32_t>(config::MaxFramesInFlight)});
+        builder.setMaxSets(config::MaxFramesInFlight + config::MaxMainCubeMap)
+        .addPoolSize({VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, static_cast<uint32_t>(config::MaxFramesInFlight)})
+        // Every frame set carries the cube map binding, so each one needs its own samplers.
+        .addPoolSize({VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, static_cast<uint32_t>(config::MaxFramesInFlight * config::MaxMainCubeMap)});
 
         renderResources->descriptorPool() = builder.build(logicalDevice->handle());
+    }
+
+    VkDescriptorSetLayoutBinding vulkan::vulkanRenderer::createCubeMapSamplerBinding()
+    {
+       builder::VulkanDescriptorSetLayoutBindingBuilder bindingBuilder;
+        bindingBuilder.setBinding(config::CubeMapBindingIndex)
+        .setDescriptorCount(config::MaxMainCubeMap)
+        .setDescriptorType(VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER)
+        .setStageFlags(VK_SHADER_STAGE_FRAGMENT_BIT);
+
+        VkDescriptorSetLayoutBinding binding = bindingBuilder.build();
+
+        return bindingBuilder.build();
     }
 
     void vulkan::vulkanRenderer::createFrameSetLayout()
@@ -527,6 +545,7 @@ namespace projectv
 
         builder::VulkanDescriptorSetLayoutBuilder builder;
         builder.addLayoutBinding(binding);
+        builder.addLayoutBinding(createCubeMapSamplerBinding());
 
         renderResources->frameSetLayout() = builder.build(logicalDevice->handle());
     }
@@ -554,28 +573,21 @@ namespace projectv
                 VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT
             );
             cameraBuffer.map();
-
-            // The buffer handle never changes, so the descriptor is written once here
-            // and only the buffer contents are updated per frame.
-            VkDescriptorBufferInfo bufferInfo{};
-            bufferInfo.buffer = cameraBuffer.handle();
-            bufferInfo.offset = 0;
-            bufferInfo.range  = sizeof(CameraUniforms);
-
-            VkWriteDescriptorSet descriptorWrite{};
-            descriptorWrite.sType           = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
-            descriptorWrite.dstSet          = descriptorSets[i];
-            descriptorWrite.dstBinding      = config::CameraBindingIndex;
-            descriptorWrite.dstArrayElement = 0;
-            descriptorWrite.descriptorType  = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
-            descriptorWrite.descriptorCount = 1;
-            descriptorWrite.pBufferInfo     = &bufferInfo;
-
-            vkUpdateDescriptorSets(logicalDevice->handle(), 1, &descriptorWrite, 0, nullptr);
-
+                               
             FrameUniformSet frameSet;
             frameSet.descriptorSet = descriptorSets[i];
             frameSet.uniformBuffer = std::move(cameraBuffer);
+
+            VkDescriptorBufferInfo bufferInfo{};
+            bufferInfo.buffer = frameSet.uniformBuffer.handle();
+            bufferInfo.offset = 0;
+            bufferInfo.range  = sizeof(CameraUniforms);
+
+            std::array<VkWriteDescriptorSet, 1> descriptorWrites{};
+            writeUniformDescSet(descriptorWrites[config::CameraBindingIndex], frameSet.descriptorSet, bufferInfo);
+
+            vkUpdateDescriptorSets(logicalDevice->handle(), descriptorWrites.size(), descriptorWrites.data(), 0, nullptr);
+
             renderResources->frameUniformSets().push_back(std::move(frameSet));
         }
     }
@@ -826,5 +838,80 @@ namespace projectv
 
         logicalDevice->graphicsQueue().submit(uploadCmd, fence);
         fence.wait();        
+    }
+
+    void vulkan::vulkanRenderer::writeUniformDescSet(VkWriteDescriptorSet &descWrite, VkDescriptorSet descSet, VkDescriptorBufferInfo &bufferInfo)
+    {
+        descWrite.sType           = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+        descWrite.dstSet          = descSet;
+        descWrite.dstBinding      = config::CameraBindingIndex;
+        descWrite.dstArrayElement = 0;
+        descWrite.descriptorType  = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+        descWrite.descriptorCount = 1;
+        descWrite.pBufferInfo     = &bufferInfo;
+    }
+
+    void vulkan::vulkanRenderer::writeSamplerDescSet(VkWriteDescriptorSet& descWrite, VkDescriptorSet descSet, VkDescriptorImageInfo& imgInfo)
+    {
+        descWrite.sType           = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+        descWrite.dstSet          = descSet;
+        descWrite.dstBinding      = config::CubeMapBindingIndex;
+        descWrite.dstArrayElement = 0;
+        descWrite.descriptorType  = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+        descWrite.descriptorCount = config::MaxMainCubeMap;
+        descWrite.pImageInfo     = &imgInfo;
+    }
+    
+    void vulkan::vulkanRenderer::createCubeSampler()
+    {
+        auto builder = builder::VulkanSamplerBuilder();
+        builder.setAddressMode(VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE)
+        .setMaxAnisotropy(4)
+        .setLodRange(0.0f, 16);
+
+        renderResources->cubeMapSampler() = builder.build(logicalDevice->handle());
+    }
+
+    void vulkan::vulkanRenderer::updateCubeMapDescriptorSets(core::gpu::GpuTextureHandle cubeMapHandle)
+    {
+        const rendererResources::VulkanImageView* cubeMapView = renderResources->gpuTextureImageView(cubeMapHandle);
+        if (!cubeMapView || cubeMapView->handle() == VK_NULL_HANDLE)
+        {
+            engine::LogError("vulkanRenderer::updateCubeMapDescriptorSets, cube map texture handle is invalid");
+            throw std::runtime_error("vulkanRenderer::updateCubeMapDescriptorSets, cube map texture handle is invalid");
+        }
+
+        if (!renderResources->cubeMapSampler())
+        {
+            engine::LogError("vulkanRenderer::updateCubeMapDescriptorSets, cube map sampler has not been created");
+            throw std::runtime_error("vulkanRenderer::updateCubeMapDescriptorSets, cube map sampler has not been created");
+        }
+
+        auto& frameUniformSets = renderResources->frameUniformSets();
+        if (frameUniformSets.empty())
+        {
+            engine::LogError("vulkanRenderer::updateCubeMapDescriptorSets, frame descriptor sets have not been created");
+            throw std::runtime_error("vulkanRenderer::updateCubeMapDescriptorSets, frame descriptor sets have not been created");
+        }
+
+        // Every frame set samples the same cube map, so one image info serves all writes.
+        VkDescriptorImageInfo imageInfo{};
+        imageInfo.sampler     = renderResources->cubeMapSampler().handle();
+        imageInfo.imageView   = cubeMapView->handle();
+        imageInfo.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+
+        std::vector<VkWriteDescriptorSet> descriptorWrites(frameUniformSets.size());
+
+        for (size_t i = 0; i < frameUniformSets.size(); i++)
+        {
+            writeSamplerDescSet(descriptorWrites[i], frameUniformSets[i].descriptorSet, imageInfo);
+        }
+
+        vkUpdateDescriptorSets(
+            logicalDevice->handle(),
+            static_cast<std::uint32_t>(descriptorWrites.size()),
+            descriptorWrites.data(),
+            0,
+            nullptr);
     }
 }
