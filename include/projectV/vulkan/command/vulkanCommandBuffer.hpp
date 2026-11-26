@@ -290,6 +290,25 @@ namespace projectv::vulkan::command
          */
         void copyBuffer(VkBuffer source, VkBuffer destination, VkDeviceSize size, VkDeviceSize srcOffset = 0, VkDeviceSize dstOffset = 0);
 
+        void copyBufferToImage(VkBuffer source, VkImage destination, VkImageLayout dstImageLayout, std::span<const VkBufferImageCopy> region);
+
+        /**
+         * @brief Records a pipeline barrier made of image memory barriers.
+         *
+         * Use it to change an image's layout, for example to
+         * VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL before copyBufferToImage() and
+         * to VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL before sampling.
+         * Commands in @p srcStage recorded before the barrier finish before
+         * commands in @p dstStage recorded after it start.
+         *
+         * @param srcStage      Pipeline stages that must finish first.
+         * @param dstStage      Pipeline stages that wait for the barrier.
+         * @param imageBarriers Image memory barriers to record; must not be empty.
+         *
+         * @throws std::runtime_error if @p imageBarriers is empty.
+         */
+        void pipelineBarrier(VkPipelineStageFlags srcStage, VkPipelineStageFlags dstStage, std::span<const VkImageMemoryBarrier> imageBarriers);
+
         /**
          * @brief Returns the underlying Vulkan command buffer handle.
          *

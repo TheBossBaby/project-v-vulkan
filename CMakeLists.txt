@@ -37,6 +37,7 @@ add_library(projectv_vulkan STATIC
     include/projectV/vulkan/builder/vulkanDescriptorSetLayoutBuilder.hpp
     include/projectV/vulkan/builder/vulkanDescriptorSetLayoutBindingBuilder.hpp
     include/projectV/vulkan/builder/vulkanDescriptorPoolBuilder.hpp
+    include/projectV/vulkan/builder/vulkanSamplerBuilder.hpp
 
     include/projectV/vulkan/config/vulkanConfig.hpp
 
@@ -60,6 +61,7 @@ add_library(projectv_vulkan STATIC
     include/projectV/vulkan/rendererResources/vulkanGraphicsPipeline.hpp
     include/projectV/vulkan/rendererResources/vulkanImage.hpp
     include/projectV/vulkan/rendererResources/VulkanImageView.hpp
+    include/projectV/vulkan/rendererResources/vulkanSampler.hpp
 
     include/projectV/vulkan/synchronization/vulkanFence.hpp
     include/projectV/vulkan/synchronization/vulkanSemaphore.hpp
@@ -73,6 +75,7 @@ add_library(projectv_vulkan STATIC
     include/projectV/vulkan/util/vulkanDebugMessenger.hpp
     include/projectV/vulkan/util/vulkanMemory.hpp
     include/projectV/vulkan/util/vulkanFormat.hpp
+    include/projectV/vulkan/util/vulkanTextureMapping.hpp
 
     include/projectV/vulkan/window/vulkanSurface.hpp
     include/projectV/vulkan/window/vulkanSwapchain.hpp
@@ -94,6 +97,7 @@ add_library(projectv_vulkan STATIC
     src/builder/vulkanDescriptorSetLayoutBuilder.cpp
     src/builder/vulkanDescriptorSetLayoutBindingBuilder.cpp
     src/builder/vulkanDescriptorPoolBuilder.cpp
+    src/builder/vulkanSamplerBuilder.cpp
 
     src/command/vulkanCommandBuffer.cpp
     src/command/vulkanCommandPool.cpp
@@ -113,6 +117,7 @@ add_library(projectv_vulkan STATIC
     src/rendererResources/vulkanGraphicsPipeline.cpp
     src/rendererResources/vulkanImage.cpp
     src/rendererResources/VulkanImageView.cpp
+    src/rendererResources/vulkanSampler.cpp
 
     src/synchronization/vulkanFence.cpp
     src/synchronization/vulkanSemaphore.cpp

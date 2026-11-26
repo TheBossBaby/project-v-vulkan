@@ -47,6 +47,7 @@ namespace projectv
         namespace rendererResources
         {
             class VulkanBuffer;
+            class VulkanImage;
         }
 
         class RendererResources;
@@ -139,7 +140,11 @@ namespace projectv
              *
              * @param items Renderables to draw this frame.
              */
-            void draw(const std::vector<core::Renderable>& items) override;
+            void drawOpaqueRenderables(const std::vector<core::Renderable>& items) override;
+
+            void drawSkybox(const core::CubeMapRenderData& cubeMap) override;
+
+            void draw(const core::RenderFramePacket& renderFramePacket) override;
 
             /**
              * @brief Uploads a CPU mesh to the GPU and registers it with the
@@ -159,6 +164,8 @@ namespace projectv
              *         mapping or the copy submission fails.
              */
             core::gpu::GpuMeshHandle uploadMesh(const struct core::Mesh& mesh) override;
+
+            core::gpu::GpuTextureHandle uploadTexture(const struct core::Texture& texture) override;
 
             /**
              * @brief Builds a graphics pipeline from SPIR-V shaders and
@@ -268,6 +275,8 @@ namespace projectv
              *         the copies fails.
              */
             void submitCopy(std::span<const BufferCopyJob> bufferCopyJobs);
+
+            void submitCopy(rendererResources::VulkanImage& inTexture, std::span<const VkBufferImageCopy> region, rendererResources::VulkanBuffer& inImgBuffer);
             
             /**
              * @brief Uploads a mesh by writing it directly into buffers the
@@ -310,17 +319,24 @@ namespace projectv
              */
             core::gpu::GpuMeshHandle stagedUpload(const struct core::Mesh& mesh);
 
+            core::gpu::GpuTextureHandle unifiedMemoryUpload(const struct core::Texture& texture);
+
+            core::gpu::GpuTextureHandle stagedUpload(const struct core::Texture& texture);
+
             /**
              * @brief Creates the descriptor pool for the per-frame descriptor
              *        sets and stores it in the renderer resources.
              *
-             * Sized for exactly config::MaxFramesInFlight sets with one
-             * uniform buffer descriptor each, so it has no room for any
-             * other sets. Must be called before createFrameUniformSets().
+             * Holds one uniform buffer descriptor and config::MaxMainCubeMap
+             * combined image sampler descriptors for each of the
+             * config::MaxFramesInFlight per-frame sets. Must be called before
+             * createFrameUniformSets().
              *
              * @throws std::runtime_error if descriptor pool creation fails.
              */
             void createDescriptorPool();
+
+            VkDescriptorSetLayoutBinding createCubeMapSamplerBinding();
 
             /**
              * @brief Creates the layout of the per-frame descriptor set and
@@ -391,6 +407,48 @@ namespace projectv
              */
             [[nodiscard]]
             rendererResources::VulkanBuffer createBuffer(VkDeviceSize size, VkBufferUsageFlags usage, VkMemoryPropertyFlags memory);
+
+            void writeUniformDescSet(VkWriteDescriptorSet& descWrite, VkDescriptorSet descSet, VkDescriptorBufferInfo& bufferInfo);
+
+            void writeSamplerDescSet(VkWriteDescriptorSet& descWrite, VkDescriptorSet descSet, VkDescriptorImageInfo& imgInfo);
+
+            void createCubeSampler();
+
+            /**
+             * @brief Uploads the unit cube drawn by drawSkybox() and stores
+             *        its handle in skyboxCubeMesh.
+             *
+             * Eight corners at +/-1 on each axis with 36 indices; only
+             * positions are filled in. Winding is not consistent, since
+             * pipelines are built without face culling.
+             *
+             * @pre createUploadCommandBuffer() has been called.
+             *
+             * @throws std::runtime_error if buffer creation or the upload fails.
+             */
+            void createSkyboxCube();
+
+            /**
+             * @brief Points the cube map binding (config::CubeMapBindingIndex)
+             *        of every per-frame descriptor set at a texture.
+             *
+             * Writes the texture's image view together with the cube map
+             * sampler as a combined image sampler, in
+             * SHADER_READ_ONLY_OPTIMAL layout.
+             *
+             * No per-frame set may be in use by a pending command buffer, so
+             * call this before rendering starts or after the device is idle.
+             *
+             * @pre createFrameUniformSets() and createCubeSampler() have been
+             *      called.
+             *
+             * @param cubeMapHandle Handle returned by uploadTexture() for a
+             *                      cube map texture.
+             *
+             * @throws std::runtime_error if @p cubeMapHandle is unknown, the
+             *         sampler is missing, or no frame sets exist yet.
+             */
+            void updateCubeMapDescriptorSets(core::gpu::GpuTextureHandle cubeMapHandle);
         private:
             std::unique_ptr<device::VulkanInstance> instance;
 
@@ -436,6 +494,13 @@ namespace projectv
             bool isFrameRunning = false;
 
             std::vector<FrameData> frames;
+
+            /// Unit cube drawn by drawSkybox(); created by createSkyboxCube().
+            core::gpu::GpuMeshHandle skyboxCubeMesh;
+
+            /// Texture currently written into the cube map binding of every
+            /// per-frame set; invalid until drawSkybox() first writes one.
+            core::gpu::GpuTextureHandle cubeMapInFrameSets;
         };
     }
 }

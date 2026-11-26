@@ -3,6 +3,8 @@
 #include <projectV/core/shaderHandle.hpp>
 #include <projectV/core/mesh.hpp>
 #include <projectV/core/meshHandle.hpp>
+#include <projectV/core/texture.hpp>
+#include <projectV/core/textureHandle.hpp>
 
 #include <projectV/engine/logging/log.hpp>
 
@@ -16,6 +18,7 @@
 #include <vulkan/builder/vulkanDescriptorPoolBuilder.hpp>
 #include <vulkan/builder/vulkanDescriptorSetLayoutBuilder.hpp>
 #include <vulkan/builder/vulkanDescriptorSetLayoutBindingBuilder.hpp>
+#include <vulkan/builder/vulkanSamplerBuilder.hpp>
 
 #include <vulkan/config/vulkanConfig.hpp>
 #include <vulkan/vulkanFactory.hpp>
@@ -37,13 +40,17 @@
 #include <vulkan/util/vulkanValidationLayerManager.hpp>
 #include <vulkan/util/vulkanDebugMessenger.hpp>
 #include <vulkan/util/vulkanFormat.hpp>
+#include <vulkan/util/vulkanTextureMapping.hpp>
 
 #include <vulkan/window/vulkanSurface.hpp>
 #include <vulkan/window/vulkanSwapchain.hpp>
 
+#include <algorithm>
 #include <array>
 #include <cassert>
+#include <cstddef>
 #include <utility>
+#include <vector>
 
 namespace projectv
 {
@@ -110,6 +117,10 @@ namespace projectv
  
         createUploadCommandBuffer();
 
+        createCubeSampler();
+
+        createSkyboxCube();
+
         return true;
     }
 
@@ -168,14 +179,8 @@ namespace projectv
         isFrameRunning = true;
     }
 
-    void vulkan::vulkanRenderer::draw(const std::vector<core::Renderable>& items)
+    void vulkan::vulkanRenderer::drawOpaqueRenderables(const std::vector<core::Renderable>& items)
     {
-        if(!isFrameRunning)
-        {
-            engine::LogTrace("vulkan::vulkanRenderer::draw, Frame is not running, skipping draw command");
-            return;
-        }
-
         VkPipeline previousGraphicsPipeline = VK_NULL_HANDLE;
         FrameData& frame = frames[currentFrame];
 
@@ -222,6 +227,61 @@ namespace projectv
         }
     }
 
+    void vulkan::vulkanRenderer::drawSkybox(const core::CubeMapRenderData &cubeMap)
+    {
+        auto graphicsPipeline = renderResources->graphicsPipeline(cubeMap.graphicsPipelineHandle);
+        if (!graphicsPipeline) return;
+
+        if (!renderResources->gpuTextureImageView(cubeMap.cubemapTexture)) return;
+
+        const projectv::vulkan::MeshEntry *cubeMesh = renderResources->gpuMesh(skyboxCubeMesh);
+        if (!cubeMesh) return;
+
+        // The cube map lives in the per-frame sets, which must not be updated while any
+        // pending command buffer uses them, nor after this frame's command buffer has
+        // bound them. So draw() calls this first, and a new skybox waits for the GPU.
+        // That only happens when the skybox changes, e.g. on level load.
+        if (cubeMap.cubemapTexture.index != cubeMapInFrameSets.index)
+        {
+            waitIdle();
+            updateCubeMapDescriptorSets(cubeMap.cubemapTexture);
+            cubeMapInFrameSets = cubeMap.cubemapTexture;
+        }
+
+        FrameData& frame = frames[currentFrame];
+
+        assert(currentFrame < renderResources->frameUniformSets().size());
+        const VkDescriptorSet& frameDescriptorSet = renderResources->frameUniformSets()[currentFrame].descriptorSet;
+
+        frame.commandBuffer.bindGraphicsPipeline(graphicsPipeline->pipeline);
+
+        frame.commandBuffer.bindDescriptorSets(
+            graphicsPipeline->layout,
+            config::FrameSetIndex,
+            { &frameDescriptorSet, 1 }
+        );
+
+        frame.commandBuffer.bindVertexBuffers(0, { &cubeMesh->vertexBuffer });
+        frame.commandBuffer.bindIndexBuffer(cubeMesh->indexBuffer, VK_INDEX_TYPE_UINT32);
+
+        frame.commandBuffer.drawIndexed(cubeMesh->indexCount, 1, 0, 0, 0);
+    }
+
+    void vulkan::vulkanRenderer::draw(const core::RenderFramePacket &renderFramePacket)
+    {
+        if(!isFrameRunning)
+        {
+            engine::LogTrace("vulkan::vulkanRenderer::draw, Frame is not running, skipping draw command");
+            return;
+        }
+
+        // Skybox first: it may rewrite the per-frame sets, which is only allowed
+        // before this frame's command buffer binds them.
+        drawSkybox(renderFramePacket.skybox);
+
+        drawOpaqueRenderables(renderFramePacket.opaqueRenderables);
+    }
+
     core::gpu::GpuMeshHandle vulkan::vulkanRenderer::uploadMesh(const struct core::Mesh& mesh)
     {
         if(physicalDevice->hasUnifiedMemory())
@@ -230,6 +290,16 @@ namespace projectv
         }
 
         return stagedUpload(mesh);
+    }
+
+    core::gpu::GpuTextureHandle projectv::vulkan::vulkanRenderer::uploadTexture(const core::Texture &texture)
+    {
+        if(physicalDevice->hasUnifiedMemory())
+        {
+            return unifiedMemoryUpload(texture);
+        }
+
+        return stagedUpload(texture);
     }
 
     core::GraphicsPipelineHandle vulkan::vulkanRenderer::createGraphicsPipeline(
@@ -389,13 +459,129 @@ namespace projectv
         });
     }
 
+    core::gpu::GpuTextureHandle projectv::vulkan::vulkanRenderer::unifiedMemoryUpload(const core::Texture &texture)
+    {
+        engine::LogWarn("vulkan::vulkanRenderer::unifiedMemoryUpload, Not implemented yet");
+        return core::gpu::GpuTextureHandle{};
+    }
+
+    core::gpu::GpuTextureHandle projectv::vulkan::vulkanRenderer::stagedUpload(const core::Texture &texture)
+    {
+        const auto& tDesc = texture.desc;
+        const auto& tData = texture.data;
+
+        VkDeviceSize imageSize = sizeof(std::uint8_t) * tData.size();
+
+        rendererResources::VulkanBuffer stagImageBuffer = createBuffer(
+            imageSize, 
+            VK_BUFFER_USAGE_TRANSFER_SRC_BIT, 
+            VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
+        
+        stagImageBuffer.write(tData.data(), imageSize);
+
+        vulkan::builder::VulkanImageBuilder builder;
+        auto imageFormat = vulkan::util::toVulkanFormat(tDesc.format);
+
+        builder.setExtent(tDesc.width, tDesc.height )
+                .setFormat(imageFormat)
+                .setTiling(VK_IMAGE_TILING_OPTIMAL)
+                .setUsageFlags(VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_SAMPLED_BIT)
+                .setInitialLayout(VK_IMAGE_LAYOUT_UNDEFINED)
+                .setImageType(vulkan::util::toVulkanImageType(tDesc.type))
+                .setMipLevels(tDesc.mipLevels)
+                .setArrayLayers(tDesc.layers)
+                .setSharingMode(VK_SHARING_MODE_EXCLUSIVE);
+
+        // A cube view can only be created on an image made cube compatible.
+        if (tDesc.type == core::TextureType::CubeMap)
+        {
+            builder.setCreateFlags(VK_IMAGE_CREATE_CUBE_COMPATIBLE_BIT);
+        }
+
+        auto vulkanTexture = builder.build(
+            logicalDevice->handle(), 
+            physicalDevice->handle());
+
+        VkImageSubresourceRange sbr{};
+        sbr.aspectMask     = VK_IMAGE_ASPECT_COLOR_BIT;
+        sbr.baseMipLevel   = 0;
+        sbr.levelCount     = tDesc.mipLevels;
+        sbr.baseArrayLayer = 0;
+        sbr.layerCount     = tDesc.layers;
+
+        rendererResources::VulkanImageView vulkanTextureImgView;
+        vulkanTextureImgView.create(
+            logicalDevice->handle(),
+            vulkanTexture.handle(),
+            vulkan::util::toVulkanImageViewType(tDesc.type),
+            imageFormat,
+            { 
+                VK_COMPONENT_SWIZZLE_IDENTITY,
+                VK_COMPONENT_SWIZZLE_IDENTITY,
+                VK_COMPONENT_SWIZZLE_IDENTITY,
+                VK_COMPONENT_SWIZZLE_IDENTITY 
+            },
+            sbr
+        );
+        
+        // One region per (mip level, layer). Each image sits at
+        // tDesc.offset(level, layer) in the staging buffer, and its rows are
+        // tightly packed, so bufferRowLength/bufferImageHeight stay 0.
+        std::vector<VkBufferImageCopy> copyRegions;
+        copyRegions.reserve(static_cast<std::size_t>(tDesc.mipLevels) * tDesc.layers);
+
+        for (std::uint32_t level = 0; level < tDesc.mipLevels; ++level)
+        {
+            const VkExtent3D mipExtent{
+                std::max(1u, tDesc.width  >> level),
+                std::max(1u, tDesc.height >> level),
+                1u
+            };
+
+            for (std::uint32_t layer = 0; layer < tDesc.layers; ++layer)
+            {
+                VkBufferImageCopy region{};
+                region.bufferOffset                    = static_cast<VkDeviceSize>(tDesc.offset(level, layer));
+                region.bufferRowLength                 = 0;
+                region.bufferImageHeight               = 0;
+                region.imageSubresource.aspectMask     = VK_IMAGE_ASPECT_COLOR_BIT;
+                region.imageSubresource.mipLevel       = level;
+                region.imageSubresource.baseArrayLayer = layer;
+                region.imageSubresource.layerCount     = 1;
+                region.imageOffset                     = {0, 0, 0};
+                region.imageExtent                     = mipExtent;
+
+                copyRegions.push_back(region);
+            }
+        }
+
+        submitCopy(vulkanTexture, copyRegions, stagImageBuffer);
+
+        return renderResources->addGpuTexture(std::move(vulkanTexture), std::move(vulkanTextureImgView));
+    }
+
     void vulkan::vulkanRenderer::createDescriptorPool()
     {
         builder::VulkanDescriptorPoolBuilder builder;
-        builder.setMaxSets(config::MaxFramesInFlight)
-        .addPoolSize({VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, static_cast<uint32_t>(config::MaxFramesInFlight)});
+        builder.setMaxSets(config::MaxFramesInFlight + config::MaxMainCubeMap)
+        .addPoolSize({VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, static_cast<uint32_t>(config::MaxFramesInFlight)})
+        // Every frame set carries the cube map binding, so each one needs its own samplers.
+        .addPoolSize({VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, static_cast<uint32_t>(config::MaxFramesInFlight * config::MaxMainCubeMap)});
 
         renderResources->descriptorPool() = builder.build(logicalDevice->handle());
+    }
+
+    VkDescriptorSetLayoutBinding vulkan::vulkanRenderer::createCubeMapSamplerBinding()
+    {
+       builder::VulkanDescriptorSetLayoutBindingBuilder bindingBuilder;
+        bindingBuilder.setBinding(config::CubeMapBindingIndex)
+        .setDescriptorCount(config::MaxMainCubeMap)
+        .setDescriptorType(VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER)
+        .setStageFlags(VK_SHADER_STAGE_FRAGMENT_BIT);
+
+        VkDescriptorSetLayoutBinding binding = bindingBuilder.build();
+
+        return bindingBuilder.build();
     }
 
     void vulkan::vulkanRenderer::createFrameSetLayout()
@@ -410,6 +596,7 @@ namespace projectv
 
         builder::VulkanDescriptorSetLayoutBuilder builder;
         builder.addLayoutBinding(binding);
+        builder.addLayoutBinding(createCubeMapSamplerBinding());
 
         renderResources->frameSetLayout() = builder.build(logicalDevice->handle());
     }
@@ -437,28 +624,21 @@ namespace projectv
                 VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT
             );
             cameraBuffer.map();
-
-            // The buffer handle never changes, so the descriptor is written once here
-            // and only the buffer contents are updated per frame.
-            VkDescriptorBufferInfo bufferInfo{};
-            bufferInfo.buffer = cameraBuffer.handle();
-            bufferInfo.offset = 0;
-            bufferInfo.range  = sizeof(CameraUniforms);
-
-            VkWriteDescriptorSet descriptorWrite{};
-            descriptorWrite.sType           = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
-            descriptorWrite.dstSet          = descriptorSets[i];
-            descriptorWrite.dstBinding      = config::CameraBindingIndex;
-            descriptorWrite.dstArrayElement = 0;
-            descriptorWrite.descriptorType  = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
-            descriptorWrite.descriptorCount = 1;
-            descriptorWrite.pBufferInfo     = &bufferInfo;
-
-            vkUpdateDescriptorSets(logicalDevice->handle(), 1, &descriptorWrite, 0, nullptr);
-
+                               
             FrameUniformSet frameSet;
             frameSet.descriptorSet = descriptorSets[i];
             frameSet.uniformBuffer = std::move(cameraBuffer);
+
+            VkDescriptorBufferInfo bufferInfo{};
+            bufferInfo.buffer = frameSet.uniformBuffer.handle();
+            bufferInfo.offset = 0;
+            bufferInfo.range  = sizeof(CameraUniforms);
+
+            std::array<VkWriteDescriptorSet, 1> descriptorWrites{};
+            writeUniformDescSet(descriptorWrites[config::CameraBindingIndex], frameSet.descriptorSet, bufferInfo);
+
+            vkUpdateDescriptorSets(logicalDevice->handle(), descriptorWrites.size(), descriptorWrites.data(), 0, nullptr);
+
             renderResources->frameUniformSets().push_back(std::move(frameSet));
         }
     }
@@ -646,5 +826,175 @@ namespace projectv
 
         logicalDevice->graphicsQueue().submit(uploadCmd, fence);
         fence.wait();
+    }
+    
+    void vulkan::vulkanRenderer::submitCopy(rendererResources::VulkanImage &inTexture, std::span<const VkBufferImageCopy> region, rendererResources::VulkanBuffer &inImgBuffer)
+    {
+        if(!uploadCommandBuffer)
+        {
+            engine::LogError("vulkan::vulkanRenderer::submitCopy, uploadCommandBuffer is invalid");
+            throw std::runtime_error("vulkan::vulkanRenderer::submitCopy, uploadCommandBuffer is invalid");
+        }
+
+        if(region.empty())
+        {
+            engine::LogError("vulkan::vulkanRenderer::submitCopy, region count is zero");
+            throw std::runtime_error("vulkan::vulkanRenderer::submitCopy, region count is zero");
+        }
+
+        auto& uploadCmd = *uploadCommandBuffer;
+
+        projectv::vulkan::sync::VulkanFence fence{};
+        fence.create(logicalDevice->handle(), false);
+
+        // Every mip level and layer of the image changes layout together.
+        VkImageMemoryBarrier barrier{};
+        barrier.sType                           = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
+        barrier.srcQueueFamilyIndex             = VK_QUEUE_FAMILY_IGNORED;
+        barrier.dstQueueFamilyIndex             = VK_QUEUE_FAMILY_IGNORED;
+        barrier.image                           = inTexture.handle();
+        barrier.subresourceRange.aspectMask     = VK_IMAGE_ASPECT_COLOR_BIT;
+        barrier.subresourceRange.baseMipLevel   = 0;
+        barrier.subresourceRange.levelCount     = VK_REMAINING_MIP_LEVELS;
+        barrier.subresourceRange.baseArrayLayer = 0;
+        barrier.subresourceRange.layerCount     = VK_REMAINING_ARRAY_LAYERS;
+
+        uploadCmd.begin(VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT);
+
+        // UNDEFINED -> TRANSFER_DST_OPTIMAL: nothing to wait for, the old
+        // contents are discarded; the copy's writes wait on the transition.
+        barrier.oldLayout     = VK_IMAGE_LAYOUT_UNDEFINED;
+        barrier.newLayout     = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
+        barrier.srcAccessMask = 0;
+        barrier.dstAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
+        uploadCmd.pipelineBarrier(
+            VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT,
+            VK_PIPELINE_STAGE_TRANSFER_BIT,
+            std::span{&barrier, 1});
+
+        uploadCmd.copyBufferToImage(inImgBuffer.handle(), inTexture.handle(), VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, region);
+
+        // TRANSFER_DST_OPTIMAL -> SHADER_READ_ONLY_OPTIMAL: make the copied
+        // data visible to fragment shader reads.
+        barrier.oldLayout     = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
+        barrier.newLayout     = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+        barrier.srcAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
+        barrier.dstAccessMask = VK_ACCESS_SHADER_READ_BIT;
+        uploadCmd.pipelineBarrier(
+            VK_PIPELINE_STAGE_TRANSFER_BIT,
+            VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT,
+            std::span{&barrier, 1});
+
+        uploadCmd.end();
+
+        logicalDevice->graphicsQueue().submit(uploadCmd, fence);
+        fence.wait();        
+    }
+
+    void vulkan::vulkanRenderer::writeUniformDescSet(VkWriteDescriptorSet &descWrite, VkDescriptorSet descSet, VkDescriptorBufferInfo &bufferInfo)
+    {
+        descWrite.sType           = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+        descWrite.dstSet          = descSet;
+        descWrite.dstBinding      = config::CameraBindingIndex;
+        descWrite.dstArrayElement = 0;
+        descWrite.descriptorType  = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+        descWrite.descriptorCount = 1;
+        descWrite.pBufferInfo     = &bufferInfo;
+    }
+
+    void vulkan::vulkanRenderer::writeSamplerDescSet(VkWriteDescriptorSet& descWrite, VkDescriptorSet descSet, VkDescriptorImageInfo& imgInfo)
+    {
+        descWrite.sType           = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+        descWrite.dstSet          = descSet;
+        descWrite.dstBinding      = config::CubeMapBindingIndex;
+        descWrite.dstArrayElement = 0;
+        descWrite.descriptorType  = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+        descWrite.descriptorCount = config::MaxMainCubeMap;
+        descWrite.pImageInfo     = &imgInfo;
+    }
+    
+    void vulkan::vulkanRenderer::createCubeSampler()
+    {
+        auto builder = builder::VulkanSamplerBuilder();
+        builder.setAddressMode(VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE)
+        .setMaxAnisotropy(4)
+        .setLodRange(0.0f, 16);
+
+        renderResources->cubeMapSampler() = builder.build(logicalDevice->handle());
+    }
+
+    void vulkan::vulkanRenderer::createSkyboxCube()
+    {
+        // Corner i has x from bit 0, y from bit 1 and z from bit 2 of i.
+        const std::array<core::math::Vector3, 8> corners
+        {{
+            {-1.0f, -1.0f, -1.0f}, { 1.0f, -1.0f, -1.0f}, {-1.0f,  1.0f, -1.0f}, { 1.0f,  1.0f, -1.0f},
+            {-1.0f, -1.0f,  1.0f}, { 1.0f, -1.0f,  1.0f}, {-1.0f,  1.0f,  1.0f}, { 1.0f,  1.0f,  1.0f}
+        }};
+
+        core::Mesh cube;
+        cube.vertices.reserve(corners.size());
+
+        for (const auto& corner : corners)
+        {
+            core::Vertex vertex{};
+            vertex.position = corner;
+            cube.vertices.push_back(vertex);
+        }
+
+        cube.indices =
+        {
+            0, 2, 1,  1, 2, 3,   // -Z
+            4, 5, 6,  5, 7, 6,   // +Z
+            0, 1, 4,  1, 5, 4,   // -Y
+            2, 6, 3,  3, 6, 7,   // +Y
+            0, 4, 2,  2, 4, 6,   // -X
+            1, 3, 5,  3, 7, 5    // +X
+        };
+
+        skyboxCubeMesh = uploadMesh(cube);
+    }
+
+    void vulkan::vulkanRenderer::updateCubeMapDescriptorSets(core::gpu::GpuTextureHandle cubeMapHandle)
+    {
+        const rendererResources::VulkanImageView* cubeMapView = renderResources->gpuTextureImageView(cubeMapHandle);
+        if (!cubeMapView || cubeMapView->handle() == VK_NULL_HANDLE)
+        {
+            engine::LogError("vulkanRenderer::updateCubeMapDescriptorSets, cube map texture handle is invalid");
+            throw std::runtime_error("vulkanRenderer::updateCubeMapDescriptorSets, cube map texture handle is invalid");
+        }
+
+        if (!renderResources->cubeMapSampler())
+        {
+            engine::LogError("vulkanRenderer::updateCubeMapDescriptorSets, cube map sampler has not been created");
+            throw std::runtime_error("vulkanRenderer::updateCubeMapDescriptorSets, cube map sampler has not been created");
+        }
+
+        auto& frameUniformSets = renderResources->frameUniformSets();
+        if (frameUniformSets.empty())
+        {
+            engine::LogError("vulkanRenderer::updateCubeMapDescriptorSets, frame descriptor sets have not been created");
+            throw std::runtime_error("vulkanRenderer::updateCubeMapDescriptorSets, frame descriptor sets have not been created");
+        }
+
+        // Every frame set samples the same cube map, so one image info serves all writes.
+        VkDescriptorImageInfo imageInfo{};
+        imageInfo.sampler     = renderResources->cubeMapSampler().handle();
+        imageInfo.imageView   = cubeMapView->handle();
+        imageInfo.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+
+        std::vector<VkWriteDescriptorSet> descriptorWrites(frameUniformSets.size());
+
+        for (size_t i = 0; i < frameUniformSets.size(); i++)
+        {
+            writeSamplerDescSet(descriptorWrites[i], frameUniformSets[i].descriptorSet, imageInfo);
+        }
+
+        vkUpdateDescriptorSets(
+            logicalDevice->handle(),
+            static_cast<std::uint32_t>(descriptorWrites.size()),
+            descriptorWrites.data(),
+            0,
+            nullptr);
     }
 }

@@ -52,7 +52,7 @@ namespace projectv
             core::GraphicsPipelineHandle handle;
             handle.index = static_cast<std::uint32_t>(m_graphicsPipelines.size());
 
-            m_graphicsPipelines.push_back({ std::move(layout), std::move(pipeline) });
+            m_graphicsPipelines.emplace_back( std::move(layout), std::move(pipeline) );
 
             return handle;
         }
@@ -110,6 +110,52 @@ namespace projectv
         const descriptor::VulkanDescriptorSetLayout &RendererResources::frameSetLayout() const
         {
             return m_frameSetLayout;
+        }
+
+        descriptor::VulkanDescriptorSetLayout& RendererResources::cubeMapSetLayout()
+        {
+            return m_cubeMapSetLayout;
+        }
+
+        const descriptor::VulkanDescriptorSetLayout& RendererResources::cubeMapSetLayout() const
+        {
+            return m_cubeMapSetLayout;
+        }
+
+        rendererResources::VulkanSampler& RendererResources::cubeMapSampler()
+        {
+            return m_cubeMapSampler;
+        }
+
+        const rendererResources::VulkanSampler& RendererResources::cubeMapSampler() const
+        {
+            return m_cubeMapSampler;
+        }
+
+        core::gpu::GpuTextureHandle RendererResources::addGpuTexture(rendererResources::VulkanImage inTexture, rendererResources::VulkanImageView inTextureImgView)
+        {
+            core::gpu::GpuTextureHandle handle;
+            handle.index = static_cast<std::uint32_t>(m_gpuTextures.size());
+
+            m_gpuTextures.emplace_back( std::move(inTexture), std::move(inTextureImgView) );
+
+            return handle;
+        }
+            
+        const rendererResources::VulkanImage* RendererResources::gpuTexture(core::gpu::GpuTextureHandle gpuTextureHandle) const
+        {
+            if (!gpuTextureHandle.isValid() || gpuTextureHandle.index >= m_gpuTextures.size())
+                return nullptr;
+            
+            return &m_gpuTextures[gpuTextureHandle.index].image;
+        }
+
+        const rendererResources::VulkanImageView* RendererResources::gpuTextureImageView(core::gpu::GpuTextureHandle gpuTextureHandle) const
+        {
+            if (!gpuTextureHandle.isValid() || gpuTextureHandle.index >= m_gpuTextures.size())
+                return nullptr;
+            
+            return &m_gpuTextures[gpuTextureHandle.index].imageView;
         }
     }
 }
