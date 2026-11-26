@@ -140,7 +140,11 @@ namespace projectv
              *
              * @param items Renderables to draw this frame.
              */
-            void draw(const std::vector<core::Renderable>& items) override;
+            void drawOpaqueRenderables(const std::vector<core::Renderable>& items) override;
+
+            void drawSkybox(const core::CubeMapRenderData& cubeMap) override;
+
+            void draw(const core::RenderFramePacket& renderFramePacket) override;
 
             /**
              * @brief Uploads a CPU mesh to the GPU and registers it with the
@@ -411,6 +415,20 @@ namespace projectv
             void createCubeSampler();
 
             /**
+             * @brief Uploads the unit cube drawn by drawSkybox() and stores
+             *        its handle in skyboxCubeMesh.
+             *
+             * Eight corners at +/-1 on each axis with 36 indices; only
+             * positions are filled in. Winding is not consistent, since
+             * pipelines are built without face culling.
+             *
+             * @pre createUploadCommandBuffer() has been called.
+             *
+             * @throws std::runtime_error if buffer creation or the upload fails.
+             */
+            void createSkyboxCube();
+
+            /**
              * @brief Points the cube map binding (config::CubeMapBindingIndex)
              *        of every per-frame descriptor set at a texture.
              *
@@ -476,6 +494,13 @@ namespace projectv
             bool isFrameRunning = false;
 
             std::vector<FrameData> frames;
+
+            /// Unit cube drawn by drawSkybox(); created by createSkyboxCube().
+            core::gpu::GpuMeshHandle skyboxCubeMesh;
+
+            /// Texture currently written into the cube map binding of every
+            /// per-frame set; invalid until drawSkybox() first writes one.
+            core::gpu::GpuTextureHandle cubeMapInFrameSets;
         };
     }
 }

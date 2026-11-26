@@ -119,6 +119,8 @@ namespace projectv
 
         createCubeSampler();
 
+        createSkyboxCube();
+
         return true;
     }
 
@@ -177,14 +179,8 @@ namespace projectv
         isFrameRunning = true;
     }
 
-    void vulkan::vulkanRenderer::draw(const std::vector<core::Renderable>& items)
+    void vulkan::vulkanRenderer::drawOpaqueRenderables(const std::vector<core::Renderable>& items)
     {
-        if(!isFrameRunning)
-        {
-            engine::LogTrace("vulkan::vulkanRenderer::draw, Frame is not running, skipping draw command");
-            return;
-        }
-
         VkPipeline previousGraphicsPipeline = VK_NULL_HANDLE;
         FrameData& frame = frames[currentFrame];
 
@@ -229,6 +225,61 @@ namespace projectv
 
             frame.commandBuffer.draw(vertexCount, 1, 0, 0);
         }
+    }
+
+    void vulkan::vulkanRenderer::drawSkybox(const core::CubeMapRenderData &cubeMap)
+    {
+        auto graphicsPipeline = renderResources->graphicsPipeline(cubeMap.graphicsPipelineHandle);
+        if (!graphicsPipeline) return;
+
+        if (!renderResources->gpuTextureImageView(cubeMap.cubemapTexture)) return;
+
+        const projectv::vulkan::MeshEntry *cubeMesh = renderResources->gpuMesh(skyboxCubeMesh);
+        if (!cubeMesh) return;
+
+        // The cube map lives in the per-frame sets, which must not be updated while any
+        // pending command buffer uses them, nor after this frame's command buffer has
+        // bound them. So draw() calls this first, and a new skybox waits for the GPU.
+        // That only happens when the skybox changes, e.g. on level load.
+        if (cubeMap.cubemapTexture.index != cubeMapInFrameSets.index)
+        {
+            waitIdle();
+            updateCubeMapDescriptorSets(cubeMap.cubemapTexture);
+            cubeMapInFrameSets = cubeMap.cubemapTexture;
+        }
+
+        FrameData& frame = frames[currentFrame];
+
+        assert(currentFrame < renderResources->frameUniformSets().size());
+        const VkDescriptorSet& frameDescriptorSet = renderResources->frameUniformSets()[currentFrame].descriptorSet;
+
+        frame.commandBuffer.bindGraphicsPipeline(graphicsPipeline->pipeline);
+
+        frame.commandBuffer.bindDescriptorSets(
+            graphicsPipeline->layout,
+            config::FrameSetIndex,
+            { &frameDescriptorSet, 1 }
+        );
+
+        frame.commandBuffer.bindVertexBuffers(0, { &cubeMesh->vertexBuffer });
+        frame.commandBuffer.bindIndexBuffer(cubeMesh->indexBuffer, VK_INDEX_TYPE_UINT32);
+
+        frame.commandBuffer.drawIndexed(cubeMesh->indexCount, 1, 0, 0, 0);
+    }
+
+    void vulkan::vulkanRenderer::draw(const core::RenderFramePacket &renderFramePacket)
+    {
+        if(!isFrameRunning)
+        {
+            engine::LogTrace("vulkan::vulkanRenderer::draw, Frame is not running, skipping draw command");
+            return;
+        }
+
+        // Skybox first: it may rewrite the per-frame sets, which is only allowed
+        // before this frame's command buffer binds them.
+        drawSkybox(renderFramePacket.skybox);
+
+        drawOpaqueRenderables(renderFramePacket.opaqueRenderables);
     }
 
     core::gpu::GpuMeshHandle vulkan::vulkanRenderer::uploadMesh(const struct core::Mesh& mesh)
@@ -870,6 +921,38 @@ namespace projectv
         .setLodRange(0.0f, 16);
 
         renderResources->cubeMapSampler() = builder.build(logicalDevice->handle());
+    }
+
+    void vulkan::vulkanRenderer::createSkyboxCube()
+    {
+        // Corner i has x from bit 0, y from bit 1 and z from bit 2 of i.
+        const std::array<core::math::Vector3, 8> corners
+        {{
+            {-1.0f, -1.0f, -1.0f}, { 1.0f, -1.0f, -1.0f}, {-1.0f,  1.0f, -1.0f}, { 1.0f,  1.0f, -1.0f},
+            {-1.0f, -1.0f,  1.0f}, { 1.0f, -1.0f,  1.0f}, {-1.0f,  1.0f,  1.0f}, { 1.0f,  1.0f,  1.0f}
+        }};
+
+        core::Mesh cube;
+        cube.vertices.reserve(corners.size());
+
+        for (const auto& corner : corners)
+        {
+            core::Vertex vertex{};
+            vertex.position = corner;
+            cube.vertices.push_back(vertex);
+        }
+
+        cube.indices =
+        {
+            0, 2, 1,  1, 2, 3,   // -Z
+            4, 5, 6,  5, 7, 6,   // +Z
+            0, 1, 4,  1, 5, 4,   // -Y
+            2, 6, 3,  3, 6, 7,   // +Y
+            0, 4, 2,  2, 4, 6,   // -X
+            1, 3, 5,  3, 7, 5    // +X
+        };
+
+        skyboxCubeMesh = uploadMesh(cube);
     }
 
     void vulkan::vulkanRenderer::updateCubeMapDescriptorSets(core::gpu::GpuTextureHandle cubeMapHandle)
