@@ -164,6 +164,29 @@ namespace projectv
             vkCmdCopyBuffer(commandBuffer, source, destination, 1, &copyRegion);
         }
 
+        void VulkanCommandBuffer::copyBufferToImage(VkBuffer source, VkImage destination, VkImageLayout dstImageLayout, std::span<const VkBufferImageCopy> region)
+        {
+            vkCmdCopyBufferToImage(commandBuffer, source, destination, dstImageLayout, region.size(), region.data());
+        }
+
+        void VulkanCommandBuffer::pipelineBarrier(VkPipelineStageFlags srcStage, VkPipelineStageFlags dstStage, std::span<const VkImageMemoryBarrier> imageBarriers)
+        {
+            if (imageBarriers.empty())
+            {
+                engine::LogError("VulkanCommandBuffer::pipelineBarrier, imageBarriers is empty");
+                throw std::runtime_error("VulkanCommandBuffer::pipelineBarrier, imageBarriers is empty");
+            }
+
+            vkCmdPipelineBarrier(
+                commandBuffer,
+                srcStage,
+                dstStage,
+                0,
+                0, nullptr,
+                0, nullptr,
+                static_cast<uint32_t>(imageBarriers.size()), imageBarriers.data());
+        }
+
         VkCommandBuffer VulkanCommandBuffer::handle() const noexcept
         {
             return commandBuffer;
