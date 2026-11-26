@@ -3,6 +3,8 @@
 #include <projectV/core/shaderHandle.hpp>
 #include <projectV/core/mesh.hpp>
 #include <projectV/core/meshHandle.hpp>
+#include <projectV/core/texture.hpp>
+#include <projectV/core/textureHandle.hpp>
 
 #include <projectV/engine/logging/log.hpp>
 
@@ -37,13 +39,17 @@
 #include <vulkan/util/vulkanValidationLayerManager.hpp>
 #include <vulkan/util/vulkanDebugMessenger.hpp>
 #include <vulkan/util/vulkanFormat.hpp>
+#include <vulkan/util/vulkanTextureMapping.hpp>
 
 #include <vulkan/window/vulkanSurface.hpp>
 #include <vulkan/window/vulkanSwapchain.hpp>
 
+#include <algorithm>
 #include <array>
 #include <cassert>
+#include <cstddef>
 #include <utility>
+#include <vector>
 
 namespace projectv
 {
@@ -232,6 +238,16 @@ namespace projectv
         return stagedUpload(mesh);
     }
 
+    core::gpu::GpuTextureHandle projectv::vulkan::vulkanRenderer::uploadTexture(const core::Texture &texture)
+    {
+        if(physicalDevice->hasUnifiedMemory())
+        {
+            return unifiedMemoryUpload(texture);
+        }
+
+        return stagedUpload(texture);
+    }
+
     core::GraphicsPipelineHandle vulkan::vulkanRenderer::createGraphicsPipeline(
         const core::GraphicsPipelineDescription& description)
     {
@@ -387,6 +403,107 @@ namespace projectv
             std::move(gpuIndexBuffer),
             static_cast<std::uint32_t>(mesh.indices.size())
         });
+    }
+
+    core::gpu::GpuTextureHandle projectv::vulkan::vulkanRenderer::unifiedMemoryUpload(const core::Texture &texture)
+    {
+        engine::LogWarn("vulkan::vulkanRenderer::unifiedMemoryUpload, Not implemented yet");
+        return core::gpu::GpuTextureHandle{};
+    }
+
+    core::gpu::GpuTextureHandle projectv::vulkan::vulkanRenderer::stagedUpload(const core::Texture &texture)
+    {
+        const auto& tDesc = texture.desc;
+        const auto& tData = texture.data;
+
+        VkDeviceSize imageSize = sizeof(std::uint8_t) * tData.size();
+
+        rendererResources::VulkanBuffer stagImageBuffer = createBuffer(
+            imageSize, 
+            VK_BUFFER_USAGE_TRANSFER_SRC_BIT, 
+            VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
+        
+        stagImageBuffer.write(tData.data(), imageSize);
+
+        vulkan::builder::VulkanImageBuilder builder;
+        auto imageFormat = vulkan::util::toVulkanFormat(tDesc.format);
+
+        builder.setExtent(tDesc.width, tDesc.height )
+                .setFormat(imageFormat)
+                .setTiling(VK_IMAGE_TILING_OPTIMAL)
+                .setUsageFlags(VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_SAMPLED_BIT)
+                .setInitialLayout(VK_IMAGE_LAYOUT_UNDEFINED)
+                .setImageType(vulkan::util::toVulkanImageType(tDesc.type))
+                .setMipLevels(tDesc.mipLevels)
+                .setArrayLayers(tDesc.layers)
+                .setSharingMode(VK_SHARING_MODE_EXCLUSIVE);
+
+        // A cube view can only be created on an image made cube compatible.
+        if (tDesc.type == core::TextureType::CubeMap)
+        {
+            builder.setCreateFlags(VK_IMAGE_CREATE_CUBE_COMPATIBLE_BIT);
+        }
+
+        auto vulkanTexture = builder.build(
+            logicalDevice->handle(), 
+            physicalDevice->handle());
+
+        VkImageSubresourceRange sbr{};
+        sbr.aspectMask     = VK_IMAGE_ASPECT_COLOR_BIT;
+        sbr.baseMipLevel   = 0;
+        sbr.levelCount     = tDesc.mipLevels;
+        sbr.baseArrayLayer = 0;
+        sbr.layerCount     = tDesc.layers;
+
+        rendererResources::VulkanImageView vulkanTextureImgView;
+        vulkanTextureImgView.create(
+            logicalDevice->handle(),
+            vulkanTexture.handle(),
+            vulkan::util::toVulkanImageViewType(tDesc.type),
+            imageFormat,
+            { 
+                VK_COMPONENT_SWIZZLE_IDENTITY,
+                VK_COMPONENT_SWIZZLE_IDENTITY,
+                VK_COMPONENT_SWIZZLE_IDENTITY,
+                VK_COMPONENT_SWIZZLE_IDENTITY 
+            },
+            sbr
+        );
+        
+        // One region per (mip level, layer). Each image sits at
+        // tDesc.offset(level, layer) in the staging buffer, and its rows are
+        // tightly packed, so bufferRowLength/bufferImageHeight stay 0.
+        std::vector<VkBufferImageCopy> copyRegions;
+        copyRegions.reserve(static_cast<std::size_t>(tDesc.mipLevels) * tDesc.layers);
+
+        for (std::uint32_t level = 0; level < tDesc.mipLevels; ++level)
+        {
+            const VkExtent3D mipExtent{
+                std::max(1u, tDesc.width  >> level),
+                std::max(1u, tDesc.height >> level),
+                1u
+            };
+
+            for (std::uint32_t layer = 0; layer < tDesc.layers; ++layer)
+            {
+                VkBufferImageCopy region{};
+                region.bufferOffset                    = static_cast<VkDeviceSize>(tDesc.offset(level, layer));
+                region.bufferRowLength                 = 0;
+                region.bufferImageHeight               = 0;
+                region.imageSubresource.aspectMask     = VK_IMAGE_ASPECT_COLOR_BIT;
+                region.imageSubresource.mipLevel       = level;
+                region.imageSubresource.baseArrayLayer = layer;
+                region.imageSubresource.layerCount     = 1;
+                region.imageOffset                     = {0, 0, 0};
+                region.imageExtent                     = mipExtent;
+
+                copyRegions.push_back(region);
+            }
+        }
+
+        submitCopy(vulkanTexture, copyRegions, stagImageBuffer);
+
+        return renderResources->addGpuTexture(std::move(vulkanTexture), std::move(vulkanTextureImgView));
     }
 
     void vulkan::vulkanRenderer::createDescriptorPool()
@@ -646,5 +763,68 @@ namespace projectv
 
         logicalDevice->graphicsQueue().submit(uploadCmd, fence);
         fence.wait();
+    }
+    
+    void vulkan::vulkanRenderer::submitCopy(rendererResources::VulkanImage &inTexture, std::span<const VkBufferImageCopy> region, rendererResources::VulkanBuffer &inImgBuffer)
+    {
+        if(!uploadCommandBuffer)
+        {
+            engine::LogError("vulkan::vulkanRenderer::submitCopy, uploadCommandBuffer is invalid");
+            throw std::runtime_error("vulkan::vulkanRenderer::submitCopy, uploadCommandBuffer is invalid");
+        }
+
+        if(region.empty())
+        {
+            engine::LogError("vulkan::vulkanRenderer::submitCopy, region count is zero");
+            throw std::runtime_error("vulkan::vulkanRenderer::submitCopy, region count is zero");
+        }
+
+        auto& uploadCmd = *uploadCommandBuffer;
+
+        projectv::vulkan::sync::VulkanFence fence{};
+        fence.create(logicalDevice->handle(), false);
+
+        // Every mip level and layer of the image changes layout together.
+        VkImageMemoryBarrier barrier{};
+        barrier.sType                           = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
+        barrier.srcQueueFamilyIndex             = VK_QUEUE_FAMILY_IGNORED;
+        barrier.dstQueueFamilyIndex             = VK_QUEUE_FAMILY_IGNORED;
+        barrier.image                           = inTexture.handle();
+        barrier.subresourceRange.aspectMask     = VK_IMAGE_ASPECT_COLOR_BIT;
+        barrier.subresourceRange.baseMipLevel   = 0;
+        barrier.subresourceRange.levelCount     = VK_REMAINING_MIP_LEVELS;
+        barrier.subresourceRange.baseArrayLayer = 0;
+        barrier.subresourceRange.layerCount     = VK_REMAINING_ARRAY_LAYERS;
+
+        uploadCmd.begin(VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT);
+
+        // UNDEFINED -> TRANSFER_DST_OPTIMAL: nothing to wait for, the old
+        // contents are discarded; the copy's writes wait on the transition.
+        barrier.oldLayout     = VK_IMAGE_LAYOUT_UNDEFINED;
+        barrier.newLayout     = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
+        barrier.srcAccessMask = 0;
+        barrier.dstAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
+        uploadCmd.pipelineBarrier(
+            VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT,
+            VK_PIPELINE_STAGE_TRANSFER_BIT,
+            std::span{&barrier, 1});
+
+        uploadCmd.copyBufferToImage(inImgBuffer.handle(), inTexture.handle(), VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, region);
+
+        // TRANSFER_DST_OPTIMAL -> SHADER_READ_ONLY_OPTIMAL: make the copied
+        // data visible to fragment shader reads.
+        barrier.oldLayout     = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
+        barrier.newLayout     = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+        barrier.srcAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
+        barrier.dstAccessMask = VK_ACCESS_SHADER_READ_BIT;
+        uploadCmd.pipelineBarrier(
+            VK_PIPELINE_STAGE_TRANSFER_BIT,
+            VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT,
+            std::span{&barrier, 1});
+
+        uploadCmd.end();
+
+        logicalDevice->graphicsQueue().submit(uploadCmd, fence);
+        fence.wait();        
     }
 }

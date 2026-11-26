@@ -47,6 +47,7 @@ namespace projectv
         namespace rendererResources
         {
             class VulkanBuffer;
+            class VulkanImage;
         }
 
         class RendererResources;
@@ -160,6 +161,8 @@ namespace projectv
              */
             core::gpu::GpuMeshHandle uploadMesh(const struct core::Mesh& mesh) override;
 
+            core::gpu::GpuTextureHandle uploadTexture(const struct core::Texture& texture) override;
+
             /**
              * @brief Builds a graphics pipeline from SPIR-V shaders and
              *        registers it with the renderer resources.
@@ -268,6 +271,8 @@ namespace projectv
              *         the copies fails.
              */
             void submitCopy(std::span<const BufferCopyJob> bufferCopyJobs);
+
+            void submitCopy(rendererResources::VulkanImage& inTexture, std::span<const VkBufferImageCopy> region, rendererResources::VulkanBuffer& inImgBuffer);
             
             /**
              * @brief Uploads a mesh by writing it directly into buffers the
@@ -309,6 +314,10 @@ namespace projectv
              *         mapping or the copy submission fails.
              */
             core::gpu::GpuMeshHandle stagedUpload(const struct core::Mesh& mesh);
+
+            core::gpu::GpuTextureHandle unifiedMemoryUpload(const struct core::Texture& texture);
+
+            core::gpu::GpuTextureHandle stagedUpload(const struct core::Texture& texture);
 
             /**
              * @brief Creates the descriptor pool for the per-frame descriptor
