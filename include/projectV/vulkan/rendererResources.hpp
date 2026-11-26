@@ -2,17 +2,22 @@
 
 #include <projectV/core/graphicsPipelineHandle.hpp>
 #include <projectV/core/gpu/gpuMeshHandle.hpp>
+#include <projectV/core/gpu/gpuTextureHandle.hpp>
 
 #include <vulkan/descriptorSet/vulkanDescriptorSetLayout.hpp>
 #include <vulkan/descriptorSet/vulkanDescriptorPool.hpp>
 
 #include <vulkan/vulkanRenderPass.hpp>
+
 #include <vulkan/rendererResources/meshEntry.hpp>
 #include <vulkan/rendererResources/vulkanFramebuffer.hpp>
 #include <vulkan/rendererResources/vulkanPipelineLayout.hpp>
 #include <vulkan/rendererResources/vulkanGraphicsPipeline.hpp>
 #include <vulkan/rendererResources/vulkanImage.hpp>
 #include <vulkan/rendererResources/VulkanImageView.hpp>
+#include <vulkan/rendererResources/vulkanSampler.hpp>
+#include <vulkan/rendererResources/vulkanBuffer.hpp>
+
 #include <vulkan/frameUniformSet.hpp>
 
 #include <vector>
@@ -35,6 +40,12 @@ namespace projectv
             {
                 rendererResources::VulkanPipelineLayout layout;
                 rendererResources::VulkanGraphicsPipeline pipeline;
+            };
+
+            struct GpuTextureEntry
+            {
+                rendererResources::VulkanImage     image;
+                rendererResources::VulkanImageView imageView;
             };
 
             VulkanRenderPass& renderPass();
@@ -161,6 +172,20 @@ namespace projectv
              *         creates it.
              */
             const descriptor::VulkanDescriptorSetLayout& frameSetLayout() const;
+
+            descriptor::VulkanDescriptorSetLayout& cubeMapSetLayout();
+
+            const descriptor::VulkanDescriptorSetLayout& cubeMapSetLayout() const;
+
+            rendererResources::VulkanSampler& cubeMapSampler();
+
+            const rendererResources::VulkanSampler& cubeMapSampler() const;
+
+            core::gpu::GpuTextureHandle addGpuTexture(rendererResources::VulkanImage inTexture, rendererResources::VulkanImageView inTextureImgView);
+
+            const rendererResources::VulkanImage* gpuTexture(core::gpu::GpuTextureHandle gpuTextureHandle) const;
+           
+            const rendererResources::VulkanImageView* gpuTextureImageView(core::gpu::GpuTextureHandle gpuTextureHandle) const;
         private:
             VulkanRenderPass m_renderPass;
 
@@ -182,6 +207,12 @@ namespace projectv
             descriptor::VulkanDescriptorSetLayout m_frameSetLayout;
 
             std::vector<FrameUniformSet> m_frameUniformSets;
+
+            std::vector<GpuTextureEntry> m_gpuTextures;
+
+            descriptor::VulkanDescriptorSetLayout m_cubeMapSetLayout;
+        
+            rendererResources::VulkanSampler m_cubeMapSampler;
         };
     }
 }
